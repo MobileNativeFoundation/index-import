@@ -1,0 +1,5 @@
+/Users/dlee/src/index-import/build/CMakeFiles/index-import.dir
+/Users/dlee/src/index-import/build/CMakeFiles/rebuild_cache.dir
+/Users/dlee/src/index-import/build/CMakeFiles/edit_cache.dir
+/Users/dlee/src/index-import/build/CMakeFiles/clang-tablegen-targets.dir
+/Users/dlee/src/index-import/build/CMakeFiles/intrinsics_gen.dir
