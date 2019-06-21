@@ -41,7 +41,7 @@ index-import \
     -remap "/Users/me/MyApp=/Users/me/MyApp2" \
     -remap "$build_dir1=$build_dir2" \
     "$build_dir1/Index/DataStore" \
-    "$build_dir2/Index/DataStore" \
+    "$build_dir2/Index/DataStore"
 ```
 
 A more complex example is importing an index from a [Bazel](https://bazel.build) built project. This example makes would be run as an Xcode "Run Script" build phase, which provides many environment variables, including: `SRCROOT`, `CONFIGURATION_TEMP_DIR`, `ARCHS`.
