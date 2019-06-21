@@ -37,20 +37,6 @@ static cl::alias VerboseAlias("V", cl::aliasopt(Verbose));
 
 struct Remapper {
 public:
-  // Parse the the path remapping command line flags. This converts strings of
-  // "X=Y" into a (regex, string) pair. Another way of looking at it: each remap
-  // is equivalent to the s/pattern/replacement/ operator.
-  static Remapper createFromCommandLine(const cl::list<std::string> &remaps) {
-    Remapper remapper;
-    for (const auto &remap : remaps) {
-      auto divider = remap.find('=');
-      std::regex pattern{remap.substr(0, divider)};
-      auto replacement = remap.substr(divider + 1);
-      remapper.addRemap(pattern, replacement);
-    }
-    return remapper;
-  }
-
   std::string remap(const std::string &input) const {
     for (const auto &remap : this->_remaps) {
       const auto &pattern = std::get<std::regex>(remap);
@@ -71,7 +57,6 @@ public:
     return input;
   }
 
-private:
   void addRemap(const std::regex &pattern, const std::string &replacement) {
     this->_remaps.emplace_back(pattern, replacement);
   }
@@ -210,9 +195,7 @@ static bool cloneRecords(StringRef recordsDirectory,
 
     std::error_code failed;
     if (status->type() == fs::file_type::directory_file) {
-      if (not fs::exists(outputPath)) {
-        failed = fs::create_directory(outputPath);
-      }
+      failed = fs::create_directories(outputPath);
     } else if (status->type() == fs::file_type::regular_file) {
       // Two record files of the same name are guaranteed to have the same
       // contents (because they include a hash of their contents in their
@@ -242,7 +225,30 @@ static bool cloneRecords(StringRef recordsDirectory,
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
-  auto remapper = Remapper::createFromCommandLine(PathRemaps);
+  Remapper remapper;
+  // Parse the the path remapping command line flags. This converts strings of
+  // "X=Y" into a (regex, string) pair. Another way of looking at it: each
+  // remap is equivalent to the s/pattern/replacement/ operator.
+  auto errors = 0;
+  for (const auto &remap : PathRemaps) {
+    auto divider = remap.find('=');
+    auto pattern = remap.substr(0, divider);
+    std::regex re;
+    try {
+      re = std::regex(pattern);
+    } catch (const std::regex_error &e) {
+      errs() << "Error parsing regular expression: '" << pattern << "':\n"
+             << e.what() << "\n";
+      errors++;
+    }
+    auto replacement = remap.substr(divider + 1);
+    remapper.addRemap(re, replacement);
+  }
+
+  if (errors) {
+    errs() << "Aborting due to errors.\n";
+    return EXIT_FAILURE;
+  }
 
   std::string initOutputIndexError;
   if (IndexUnitWriter::initIndexDirectory(OutputIndexPath,
@@ -292,6 +298,9 @@ int main(int argc, char **argv) {
                    << unitReadError;
       success = false;
       continue;
+    }
+    if (Verbose) {
+      outs() << "Remapping file " << unitPath << "\n";
     }
 
     ModuleNameScope moduleNames;
