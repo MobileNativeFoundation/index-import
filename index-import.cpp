@@ -170,10 +170,9 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
     case IndexUnitReader::DependencyKind::Record:
       writer.addRecordFile(name, file, isSystem, moduleNameRef);
       break;
-    case IndexUnitReader::DependencyKind::File: {
+    case IndexUnitReader::DependencyKind::File:
       writer.addFileDependency(file, isSystem, moduleNameRef);
       break;
-    }
     }
     return true;
   });
