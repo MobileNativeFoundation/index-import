@@ -18,7 +18,7 @@ Path remapping is done with regex substitution. `index-import` accepts one or mo
 
 ### Index File Format
 
-The index consists of two types of files, Unit files and Record files. Both are [LLVM Bitstream](https://www.llvm.org/docs/BitCodeFormat.html#bitstream-format), a common binary format used by LLVM/Clang/Swift. Record files contain no paths and can be simply copied. Only Unit files contain paths, so only unit files need to be rewritten. A read/write API is available in the `clangIndex` library. `index-import` uses [`IndexUnitReader`](https://github.com/apple/swift-clang/blob/swift-5.0-branch/include/clang/Index/IndexUnitReader.h) and [`IndexUnitWriter`](https://github.com/apple/swift-clang/blob/swift-5.0-branch/lib/Index/IndexUnitWriter.cpp).
+The index consists of two types of files, Unit files and Record files. Both are [LLVM Bitstream](https://www.llvm.org/docs/BitCodeFormat.html#bitstream-format), a common binary format used by LLVM/Clang/Swift. Record files contain no paths and can be simply copied. Only Unit files contain paths, so only unit files need to be rewritten. A read/write API is available in the `clangIndex` library. `index-import` uses [`IndexUnitReader`](https://github.com/apple/swift-clang/blob/swift-5.0-branch/include/clang/Index/IndexUnitReader.h) and [`IndexUnitWriter`](https://github.com/apple/swift-clang/blob/swift-5.0-branch/include/clang/Index/IndexUnitWriter.h).
 
 ## Resources
 
