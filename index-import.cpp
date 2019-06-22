@@ -99,10 +99,10 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
   auto sysrootPath = remapper.remap(reader->getSysrootPath());
 
   if (Verbose) {
-    llvm::outs() << "MainFilePath: " << mainFilePath << "\n"
-                 << "OutputFile: " << outputFile << "\n"
-                 << "WorkingDir: " << workingDir << "\n"
-                 << "SysrootPath: " << sysrootPath << "\n";
+    outs() << "MainFilePath: " << mainFilePath << "\n"
+           << "OutputFile: " << outputFile << "\n"
+           << "WorkingDir: " << workingDir << "\n"
+           << "SysrootPath: " << sysrootPath << "\n";
   }
 
   auto &fsOpts = fileMgr.getFileSystemOpts();
@@ -131,7 +131,7 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
     }
 
     if (Verbose) {
-      llvm::outs() << "DependencyFilePath: " << filePath << "\n";
+      outs() << "DependencyFilePath: " << filePath << "\n";
     }
 
     switch (info.Kind) {
@@ -145,7 +145,7 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
       if (name != "") {
         writer.getUnitNameForOutputFile(filePath, unitName);
         if (Verbose) {
-          llvm::outs() << "DependencyUnitName: " << unitName << "\n";
+          outs() << "DependencyUnitName: " << unitName << "\n";
         }
       }
 
@@ -184,8 +184,8 @@ static bool cloneRecords(StringRef recordsDirectory,
     const auto status = dir->status();
     if (status.getError()) {
       success = false;
-      llvm::errs() << "error: Could not access file status of path "
-                   << dir->path() << "\n";
+      errs() << "error: Could not access file status of path " << dir->path()
+             << "\n";
       continue;
     }
 
@@ -208,15 +208,15 @@ static bool cloneRecords(StringRef recordsDirectory,
 
     if (failed) {
       success = false;
-      llvm::errs() << "error: " << strerror(errno) << "\n"
-                   << "\tcould not copy record file: " << inputPath << "\n";
+      errs() << "error: " << strerror(errno) << "\n"
+             << "\tcould not copy record file: " << inputPath << "\n";
     }
   }
 
   if (dirError) {
     success = false;
-    llvm::errs() << "error: aborted while reading from records directory: "
-                 << dirError.message() << "\n";
+    errs() << "error: aborted while reading from records directory: "
+           << dirError.message() << "\n";
   }
 
   return success;
@@ -236,25 +236,28 @@ int main(int argc, char **argv) {
     std::regex re;
     try {
       re = std::regex(pattern);
+      auto replacement = remap.substr(divider + 1);
+      remapper.addRemap(re, replacement);
     } catch (const std::regex_error &e) {
       errs() << "Error parsing regular expression: '" << pattern << "':\n"
              << e.what() << "\n";
       errors++;
     }
-    auto replacement = remap.substr(divider + 1);
-    remapper.addRemap(re, replacement);
   }
 
   if (errors) {
-    errs() << "Aborting due to errors.\n";
+    errs() << "Aborting due to " << errors;
+    errs() << " error" << (errors > 1) ? "s"
+                                       : ""
+                                             << ".\n";
     return EXIT_FAILURE;
   }
 
   std::string initOutputIndexError;
   if (IndexUnitWriter::initIndexDirectory(OutputIndexPath,
                                           initOutputIndexError)) {
-    llvm::errs() << "error: failed to initialize index store; "
-                 << initOutputIndexError << "\n";
+    errs() << "error: failed to initialize index store; "
+           << initOutputIndexError << "\n";
     return EXIT_FAILURE;
   }
 
@@ -265,8 +268,7 @@ int main(int argc, char **argv) {
 
   if (not fs::is_directory(unitDirectory) ||
       not fs::is_directory(recordsDirectory)) {
-    llvm::errs() << "error: invalid index store directory " << InputIndexPath
-                 << "\n";
+    errs() << "error: invalid index store directory " << InputIndexPath << "\n";
     return EXIT_FAILURE;
   }
 
@@ -294,8 +296,8 @@ int main(int argc, char **argv) {
     std::string unitReadError;
     auto reader = IndexUnitReader::createWithFilePath(unitPath, unitReadError);
     if (not reader) {
-      llvm::errs() << "error: failed to read unit file " << unitPath << "\n"
-                   << unitReadError;
+      errs() << "error: failed to read unit file " << unitPath << "\n"
+             << unitReadError;
       success = false;
       continue;
     }
@@ -308,15 +310,15 @@ int main(int argc, char **argv) {
 
     std::string unitWriteError;
     if (writer.write(unitWriteError)) {
-      llvm::errs() << "error: failed to write index store; " << unitWriteError
-                   << "\n";
+      errs() << "error: failed to write index store; " << unitWriteError
+             << "\n";
       success = false;
     }
   }
 
   if (dirError) {
-    llvm::errs() << "error: aborted while reading from unit directory: "
-                 << dirError.message() << "\n";
+    errs() << "error: aborted while reading from unit directory: "
+           << dirError.message() << "\n";
     success = false;
   }
 
