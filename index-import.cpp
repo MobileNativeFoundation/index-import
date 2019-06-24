@@ -195,21 +195,24 @@ static bool cloneRecords(StringRef recordsDirectory,
 
     std::error_code failed;
     if (status->type() == fs::file_type::directory_file) {
-      failed = fs::create_directories(outputPath);
+      failed = fs::create_directory(outputPath);
+      if (failed && failed != std::errc::file_exists) {
+        success = false;
+        errs() << "error: " << strerror(errno) << "\n"
+               << "\tcould not create directory: " << outputPath << "\n";
+      }
     } else if (status->type() == fs::file_type::regular_file) {
       // Two record files of the same name are guaranteed to have the same
       // contents (because they include a hash of their contents in their
       // file name). If the destination record file already exists, it
       // doesn't need to be cloned or copied.
-      if (not fs::exists(outputPath)) {
-        failed = fs::copy_file(inputPath, outputPath);
+      failed = fs::copy_file(inputPath, outputPath);
+      if (failed && failed != std::errc::file_exists) {
+        success = false;
+        errs() << "error: " << strerror(errno) << "\n"
+               << "\tcould not copy record file from `" << inputPath << "` to `"
+               << outputPath << "`\n";
       }
-    }
-
-    if (failed) {
-      success = false;
-      errs() << "error: " << strerror(errno) << "\n"
-             << "\tcould not copy record file: " << inputPath << "\n";
     }
   }
 
@@ -222,8 +225,27 @@ static bool cloneRecords(StringRef recordsDirectory,
   return success;
 }
 
+// Normalize a path by removing /./ or // from it.
+std::string normalizePath(StringRef Path) {
+  SmallString<128> NormalizedPath;
+  for (path::const_iterator I = path::begin(Path), E = path::end(Path); I != E;
+       ++I) {
+    if (*I != ".")
+      sys::path::append(NormalizedPath, *I);
+  }
+  return NormalizedPath.str();
+}
+
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
+
+  InputIndexPath = normalizePath(InputIndexPath);
+  OutputIndexPath = normalizePath(OutputIndexPath);
+
+  if (Verbose) {
+    outs() << "Remapping Index Store at: '" << InputIndexPath << "' to '"
+           << OutputIndexPath << "'\n";
+  }
 
   Remapper remapper;
   // Parse the the path remapping command line flags. This converts strings of
@@ -233,9 +255,8 @@ int main(int argc, char **argv) {
   for (const auto &remap : PathRemaps) {
     auto divider = remap.find('=');
     auto pattern = remap.substr(0, divider);
-    std::regex re;
     try {
-      re = std::regex(pattern);
+      std::regex re(pattern);
       auto replacement = remap.substr(divider + 1);
       remapper.addRemap(re, replacement);
     } catch (const std::regex_error &e) {
