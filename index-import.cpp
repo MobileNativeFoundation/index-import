@@ -172,6 +172,12 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
   return writer;
 }
 
+// With swift-5.1, fs::copy_file supports cloning. Until then, use this.
+static int copy_file(StringRef from, StringRef to) {
+  const auto flags = COPYFILE_DATA | COPYFILE_CLONE;
+  return copyfile(from.str().c_str(), to.str().c_str(), nullptr, flags);
+}
+
 static bool cloneRecords(StringRef recordsDirectory,
                          const std::string &inputIndexPath,
                          const std::string &outputIndexPath) {
@@ -206,11 +212,11 @@ static bool cloneRecords(StringRef recordsDirectory,
       // file name). If the destination record file already exists, it
       // doesn't need to be cloned or copied.
       if (not fs::exists(outputPath)) {
-        std::error_code failed = fs::copy_file(inputPath, outputPath);
+        auto failed = copy_file(inputPath, outputPath);
         if (failed) {
           success = false;
           errs() << "Could not copy record file from `" << inputPath << "` to `"
-                 << outputPath << "`: " << failed.message() << "\n";
+                 << outputPath << "`: " << strerror(errno) << "\n";
         }
       }
     }
