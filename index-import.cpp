@@ -37,20 +37,6 @@ static cl::alias VerboseAlias("V", cl::aliasopt(Verbose));
 
 struct Remapper {
 public:
-  // Parse the the path remapping command line flags. This converts strings of
-  // "X=Y" into a (regex, string) pair. Another way of looking at it: each remap
-  // is equivalent to the s/pattern/replacement/ operator.
-  static Remapper createFromCommandLine(const cl::list<std::string> &remaps) {
-    Remapper remapper;
-    for (const auto &remap : remaps) {
-      auto divider = remap.find('=');
-      std::regex pattern{remap.substr(0, divider)};
-      auto replacement = remap.substr(divider + 1);
-      remapper.addRemap(pattern, replacement);
-    }
-    return remapper;
-  }
-
   std::string remap(const std::string &input) const {
     for (const auto &remap : this->_remaps) {
       const auto &pattern = std::get<std::regex>(remap);
@@ -71,7 +57,6 @@ public:
     return input;
   }
 
-private:
   void addRemap(const std::regex &pattern, const std::string &replacement) {
     this->_remaps.emplace_back(pattern, replacement);
   }
@@ -114,10 +99,10 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
   auto sysrootPath = remapper.remap(reader->getSysrootPath());
 
   if (Verbose) {
-    llvm::outs() << "MainFilePath: " << mainFilePath << "\n"
-                 << "OutputFile: " << outputFile << "\n"
-                 << "WorkingDir: " << workingDir << "\n"
-                 << "SysrootPath: " << sysrootPath << "\n";
+    outs() << "MainFilePath: " << mainFilePath << "\n"
+           << "OutputFile: " << outputFile << "\n"
+           << "WorkingDir: " << workingDir << "\n"
+           << "SysrootPath: " << sysrootPath << "\n";
   }
 
   auto &fsOpts = fileMgr.getFileSystemOpts();
@@ -146,7 +131,7 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
     }
 
     if (Verbose) {
-      llvm::outs() << "DependencyFilePath: " << filePath << "\n";
+      outs() << "DependencyFilePath: " << filePath << "\n";
     }
 
     switch (info.Kind) {
@@ -160,7 +145,7 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
       if (name != "") {
         writer.getUnitNameForOutputFile(filePath, unitName);
         if (Verbose) {
-          llvm::outs() << "DependencyUnitName: " << unitName << "\n";
+          outs() << "DependencyUnitName: " << unitName << "\n";
         }
       }
 
@@ -199,8 +184,8 @@ static bool cloneRecords(StringRef recordsDirectory,
     const auto status = dir->status();
     if (status.getError()) {
       success = false;
-      llvm::errs() << "error: Could not access file status of path "
-                   << dir->path() << "\n";
+      errs() << "error: Could not access file status of path " << dir->path()
+             << "\n";
       continue;
     }
 
@@ -208,10 +193,12 @@ static bool cloneRecords(StringRef recordsDirectory,
     SmallString<128> outputPath{inputPath};
     path::replace_path_prefix(outputPath, inputIndexPath, outputIndexPath);
 
-    std::error_code failed;
     if (status->type() == fs::file_type::directory_file) {
-      if (not fs::exists(outputPath)) {
-        failed = fs::create_directory(outputPath);
+      std::error_code failed = fs::create_directory(outputPath);
+      if (failed && failed != std::errc::file_exists) {
+        success = false;
+        errs() << "Could not create directory `" << outputPath
+               << "`: " << failed.message() << "\n";
       }
     } else if (status->type() == fs::file_type::regular_file) {
       // Two record files of the same name are guaranteed to have the same
@@ -219,36 +206,77 @@ static bool cloneRecords(StringRef recordsDirectory,
       // file name). If the destination record file already exists, it
       // doesn't need to be cloned or copied.
       if (not fs::exists(outputPath)) {
-        failed = fs::copy_file(inputPath, outputPath);
+        std::error_code failed = fs::copy_file(inputPath, outputPath);
+        if (failed) {
+          success = false;
+          errs() << "Could not copy record file from `" << inputPath << "` to `"
+                 << outputPath << "`: " << failed.message() << "\n";
+        }
       }
-    }
-
-    if (failed) {
-      success = false;
-      llvm::errs() << "error: " << strerror(errno) << "\n"
-                   << "\tcould not copy record file: " << inputPath << "\n";
     }
   }
 
   if (dirError) {
     success = false;
-    llvm::errs() << "error: aborted while reading from records directory: "
-                 << dirError.message() << "\n";
+    errs() << "error: aborted while reading from records directory: "
+           << dirError.message() << "\n";
   }
 
   return success;
 }
 
+// Normalize a path by removing /./ or // from it.
+std::string normalizePath(StringRef Path) {
+  SmallString<128> NormalizedPath;
+  for (auto I = path::begin(Path), E = path::end(Path); I != E; ++I) {
+    if (*I != ".")
+      sys::path::append(NormalizedPath, *I);
+  }
+  return NormalizedPath.str();
+}
+
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
-  auto remapper = Remapper::createFromCommandLine(PathRemaps);
+  InputIndexPath = normalizePath(InputIndexPath);
+  OutputIndexPath = normalizePath(OutputIndexPath);
+
+  if (Verbose) {
+    outs() << "Remapping Index Store at: '" << InputIndexPath << "' to '"
+           << OutputIndexPath << "'\n";
+  }
+
+  Remapper remapper;
+  // Parse the the path remapping command line flags. This converts strings of
+  // "X=Y" into a (regex, string) pair. Another way of looking at it: each
+  // remap is equivalent to the s/pattern/replacement/ operator.
+  auto errors = 0;
+  for (const auto &remap : PathRemaps) {
+    auto divider = remap.find('=');
+    auto pattern = remap.substr(0, divider);
+    try {
+      std::regex re(pattern);
+      auto replacement = remap.substr(divider + 1);
+      remapper.addRemap(re, replacement);
+    } catch (const std::regex_error &e) {
+      errs() << "Error parsing regular expression: '" << pattern << "':\n"
+             << e.what() << "\n";
+      errors++;
+    }
+  }
+
+  if (errors) {
+    errs() << "Aborting due to " << errors;
+    errs() << " error" << ((errors > 1) ? "s" : "");
+    errs() << ".\n";
+    return EXIT_FAILURE;
+  }
 
   std::string initOutputIndexError;
   if (IndexUnitWriter::initIndexDirectory(OutputIndexPath,
                                           initOutputIndexError)) {
-    llvm::errs() << "error: failed to initialize index store; "
-                 << initOutputIndexError << "\n";
+    errs() << "error: failed to initialize index store; "
+           << initOutputIndexError << "\n";
     return EXIT_FAILURE;
   }
 
@@ -259,8 +287,7 @@ int main(int argc, char **argv) {
 
   if (not fs::is_directory(unitDirectory) ||
       not fs::is_directory(recordsDirectory)) {
-    llvm::errs() << "error: invalid index store directory " << InputIndexPath
-                 << "\n";
+    errs() << "error: invalid index store directory " << InputIndexPath << "\n";
     return EXIT_FAILURE;
   }
 
@@ -288,10 +315,13 @@ int main(int argc, char **argv) {
     std::string unitReadError;
     auto reader = IndexUnitReader::createWithFilePath(unitPath, unitReadError);
     if (not reader) {
-      llvm::errs() << "error: failed to read unit file " << unitPath << "\n"
-                   << unitReadError;
+      errs() << "error: failed to read unit file " << unitPath << "\n"
+             << unitReadError;
       success = false;
       continue;
+    }
+    if (Verbose) {
+      outs() << "Remapping file " << unitPath << "\n";
     }
 
     ModuleNameScope moduleNames;
@@ -299,15 +329,15 @@ int main(int argc, char **argv) {
 
     std::string unitWriteError;
     if (writer.write(unitWriteError)) {
-      llvm::errs() << "error: failed to write index store; " << unitWriteError
-                   << "\n";
+      errs() << "error: failed to write index store; " << unitWriteError
+             << "\n";
       success = false;
     }
   }
 
   if (dirError) {
-    llvm::errs() << "error: aborted while reading from unit directory: "
-                 << dirError.message() << "\n";
+    errs() << "error: aborted while reading from unit directory: "
+           << dirError.message() << "\n";
     success = false;
   }
 
