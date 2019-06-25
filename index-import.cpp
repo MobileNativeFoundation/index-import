@@ -193,25 +193,25 @@ static bool cloneRecords(StringRef recordsDirectory,
     SmallString<128> outputPath{inputPath};
     path::replace_path_prefix(outputPath, inputIndexPath, outputIndexPath);
 
-    std::error_code failed;
     if (status->type() == fs::file_type::directory_file) {
-      failed = fs::create_directory(outputPath);
+      std::error_code failed = fs::create_directory(outputPath);
       if (failed && failed != std::errc::file_exists) {
         success = false;
-        errs() << "error: " << strerror(errno) << "\n"
-               << "\tcould not create directory: " << outputPath << "\n";
+        errs() << "Could not create directory `" << outputPath
+               << "`: " << failed.message() << "\n";
       }
     } else if (status->type() == fs::file_type::regular_file) {
       // Two record files of the same name are guaranteed to have the same
       // contents (because they include a hash of their contents in their
       // file name). If the destination record file already exists, it
       // doesn't need to be cloned or copied.
-      failed = fs::copy_file(inputPath, outputPath);
-      if (failed && failed != std::errc::file_exists) {
-        success = false;
-        errs() << "error: " << strerror(errno) << "\n"
-               << "\tcould not copy record file from `" << inputPath << "` to `"
-               << outputPath << "`\n";
+      if (not fs::exists(outputPath)) {
+        std::error_code failed = fs::copy_file(inputPath, outputPath);
+        if (failed) {
+          success = false;
+          errs() << "Could not copy record file from `" << inputPath << "` to `"
+                 << outputPath << "`: " << failed.message() << "\n";
+        }
       }
     }
   }
@@ -228,8 +228,7 @@ static bool cloneRecords(StringRef recordsDirectory,
 // Normalize a path by removing /./ or // from it.
 std::string normalizePath(StringRef Path) {
   SmallString<128> NormalizedPath;
-  for (path::const_iterator I = path::begin(Path), E = path::end(Path); I != E;
-       ++I) {
+  for (auto I = path::begin(Path), E = path::end(Path); I != E; ++I) {
     if (*I != ".")
       sys::path::append(NormalizedPath, *I);
   }
