@@ -172,7 +172,7 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
   return writer;
 }
 
-static int copy_record(StringRef from, StringRef to) {
+static int copyRecord(StringRef from, StringRef to) {
   // Two record files of the same name are guaranteed to have the same
   // contents, because the filename contains a hash of its contents. If the
   // destination record file already exists, no action needs to be taken.
