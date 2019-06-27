@@ -172,10 +172,17 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
   return writer;
 }
 
-// With swift-5.1, fs::copy_file supports cloning. Until then, use this.
-static int copy_file(StringRef from, StringRef to) {
-  const auto flags = COPYFILE_DATA | COPYFILE_CLONE;
-  return copyfile(from.str().c_str(), to.str().c_str(), nullptr, flags);
+static int copy_record(StringRef from, StringRef to) {
+  // Two record files of the same name are guaranteed to have the same
+  // contents, because the filename contains a hash of its contents. If the
+  // destination record file already exists, no action needs to be taken.
+  if (fs::exists(from)) {
+    return 0;
+  }
+
+  // With swift-5.1, fs::copy_file supports cloning. Until then, use copyfile.
+  return copyfile(from.str().c_str(), to.str().c_str(), nullptr,
+                  COPYFILE_CLONE);
 }
 
 static bool cloneRecords(StringRef recordsDirectory,
@@ -207,17 +214,11 @@ static bool cloneRecords(StringRef recordsDirectory,
                << "`: " << failed.message() << "\n";
       }
     } else if (status->type() == fs::file_type::regular_file) {
-      // Two record files of the same name are guaranteed to have the same
-      // contents (because they include a hash of their contents in their
-      // file name). If the destination record file already exists, it
-      // doesn't need to be cloned or copied.
-      if (not fs::exists(outputPath)) {
-        auto failed = copy_file(inputPath, outputPath);
-        if (failed) {
-          success = false;
-          errs() << "Could not copy record file from `" << inputPath << "` to `"
-                 << outputPath << "`: " << strerror(errno) << "\n";
-        }
+      auto failed = copy_record(inputPath, outputPath);
+      if (failed) {
+        success = false;
+        errs() << "Could not copy record file from `" << inputPath << "` to `"
+               << outputPath << "`: " << strerror(errno) << "\n";
       }
     }
   }
