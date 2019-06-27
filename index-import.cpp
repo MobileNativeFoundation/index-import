@@ -172,7 +172,7 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
   return writer;
 }
 
-static int copyRecord(StringRef from, StringRef to) {
+static int cloneRecord(StringRef from, StringRef to) {
   // Two record files of the same name are guaranteed to have the same
   // contents, because the filename contains a hash of its contents. If the
   // destination record file already exists, no action needs to be taken.
@@ -214,7 +214,7 @@ static bool cloneRecords(StringRef recordsDirectory,
                << "`: " << failed.message() << "\n";
       }
     } else if (status->type() == fs::file_type::regular_file) {
-      auto failed = copy_record(inputPath, outputPath);
+      auto failed = cloneRecord(inputPath, outputPath);
       if (failed) {
         success = false;
         errs() << "Could not copy record file from `" << inputPath << "` to `"
