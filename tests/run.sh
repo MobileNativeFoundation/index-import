@@ -9,6 +9,9 @@ readonly base_dir=$(dirname "$0")
 echo "Testing clang indexes"
 pushd "$base_dir"/clang >/dev/null
 
+# Clean any test state from previous runs.
+rm -fr input output
+
 # Produce the index.
 xcrun clang -fsyntax-only -index-store-path input input.c
 
@@ -34,6 +37,9 @@ popd >/dev/null
 
 echo "Testing swiftc indexes"
 pushd "$base_dir"/swiftc >/dev/null
+
+# Clean any test state from previous runs.
+rm -fr input output
 
 # Produce the index and delete the unneeded .o.
 xcrun swiftc -index-store-path input -c input.swift && rm input.o
