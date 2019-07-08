@@ -176,7 +176,7 @@ static int cloneRecord(StringRef from, StringRef to) {
   // Two record files of the same name are guaranteed to have the same
   // contents, because the filename contains a hash of its contents. If the
   // destination record file already exists, no action needs to be taken.
-  if (fs::exists(from)) {
+  if (fs::exists(to)) {
     return 0;
   }
 
