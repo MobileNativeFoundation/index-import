@@ -245,49 +245,50 @@ std::string normalizePath(StringRef Path) {
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
+  OutputIndexPath = normalizePath(OutputIndexPath);
+
+  Remapper remapper;
+  // Parse the the path remapping command line flags. This converts strings of
+  // "X=Y" into a (regex, string) pair. Another way of looking at it: each
+  // remap is equivalent to the s/pattern/replacement/ operator.
+  auto errors = 0;
+  for (const auto &remap : PathRemaps) {
+    auto divider = remap.find('=');
+    auto pattern = remap.substr(0, divider);
+    try {
+      std::regex re(pattern);
+      auto replacement = remap.substr(divider + 1);
+      remapper.addRemap(re, replacement);
+    } catch (const std::regex_error &e) {
+      errs() << "Error parsing regular expression: '" << pattern << "':\n"
+             << e.what() << "\n";
+      errors++;
+    }
+  }
+
+  if (errors) {
+    errs() << "Aborting due to " << errors
+           << " error" << ((errors > 1) ? "s" : "")
+           << ".\n";
+    return EXIT_FAILURE;
+  }
+
+  std::string initOutputIndexError;
+  if (IndexUnitWriter::initIndexDirectory(OutputIndexPath,
+                                          initOutputIndexError)) {
+    errs() << "error: failed to initialize index store; "
+           << initOutputIndexError << "\n";
+    return EXIT_FAILURE;
+  }
+
   bool success = true;
 
   for (auto &InputIndexPath : InputIndexPaths) {
     InputIndexPath = normalizePath(InputIndexPath);
-    OutputIndexPath = normalizePath(OutputIndexPath);
 
     if (Verbose) {
       outs() << "Remapping Index Store at: '" << InputIndexPath << "' to '"
              << OutputIndexPath << "'\n";
-    }
-
-    Remapper remapper;
-    // Parse the the path remapping command line flags. This converts strings of
-    // "X=Y" into a (regex, string) pair. Another way of looking at it: each
-    // remap is equivalent to the s/pattern/replacement/ operator.
-    auto errors = 0;
-    for (const auto &remap : PathRemaps) {
-      auto divider = remap.find('=');
-      auto pattern = remap.substr(0, divider);
-      try {
-        std::regex re(pattern);
-        auto replacement = remap.substr(divider + 1);
-        remapper.addRemap(re, replacement);
-      } catch (const std::regex_error &e) {
-        errs() << "Error parsing regular expression: '" << pattern << "':\n"
-               << e.what() << "\n";
-        errors++;
-      }
-    }
-
-    if (errors) {
-      errs() << "Aborting due to " << errors;
-      errs() << " error" << ((errors > 1) ? "s" : "");
-      errs() << ".\n";
-      return EXIT_FAILURE;
-    }
-
-    std::string initOutputIndexError;
-    if (IndexUnitWriter::initIndexDirectory(OutputIndexPath,
-                                            initOutputIndexError)) {
-      errs() << "error: failed to initialize index store; "
-             << initOutputIndexError << "\n";
-      return EXIT_FAILURE;
     }
 
     SmallString<256> unitDirectory;
