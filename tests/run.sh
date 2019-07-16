@@ -89,7 +89,7 @@ ls output/v5/records/N2/input1.c-25D1KZY099GN2 >/dev/null
 ls output/v5/records/RL/input2.c-1F2N5TQ6O2TRL >/dev/null
 
 # Check that the record files are identical.
-for record in input1/v5/records/*; do
+for record in {input1,input2}/v5/records/*; do
     diff -q -r "$record" output/v5/records/"$(basename "$record")"
 done
 
