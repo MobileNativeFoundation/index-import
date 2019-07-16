@@ -267,9 +267,8 @@ int main(int argc, char **argv) {
   }
 
   if (errors) {
-    errs() << "Aborting due to " << errors
-           << " error" << ((errors > 1) ? "s" : "")
-           << ".\n";
+    errs() << "Aborting due to " << errors << " error"
+           << ((errors > 1) ? "s" : "") << ".\n";
     return EXIT_FAILURE;
   }
 
