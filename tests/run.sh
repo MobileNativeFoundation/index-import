@@ -68,9 +68,9 @@ echo "Testing multiple indexes"
 pushd "$base_dir"/multiple >/dev/null
 
 # Clean any test state from previous runs.
-rm -fr input output
+rm -fr input1 input2 output
 
-# Produce the index.
+# Produce the two indexes.
 xcrun clang -fsyntax-only -index-store-path input1 input1.c
 xcrun clang -fsyntax-only -index-store-path input2 input2.c
 
