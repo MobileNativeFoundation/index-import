@@ -25,8 +25,8 @@ static cl::list<std::string> PathRemaps("remap", cl::OneOrMore,
                                         cl::value_desc("regex=replacement"));
 static cl::alias PathRemapsAlias("r", cl::aliasopt(PathRemaps));
 
-static cl::opt<std::string> InputIndexPath(cl::Positional, cl::Required,
-                                           cl::desc("<input-indexstore>"));
+static cl::list<std::string> InputIndexPaths(cl::Positional, cl::OneOrMore,
+                                             cl::desc("<input-indexstores>"));
 
 static cl::opt<std::string> OutputIndexPath(cl::Positional, cl::Required,
                                             cl::desc("<output-indexstore>"));
@@ -245,107 +245,111 @@ std::string normalizePath(StringRef Path) {
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
-  InputIndexPath = normalizePath(InputIndexPath);
-  OutputIndexPath = normalizePath(OutputIndexPath);
-
-  if (Verbose) {
-    outs() << "Remapping Index Store at: '" << InputIndexPath << "' to '"
-           << OutputIndexPath << "'\n";
-  }
-
-  Remapper remapper;
-  // Parse the the path remapping command line flags. This converts strings of
-  // "X=Y" into a (regex, string) pair. Another way of looking at it: each
-  // remap is equivalent to the s/pattern/replacement/ operator.
-  auto errors = 0;
-  for (const auto &remap : PathRemaps) {
-    auto divider = remap.find('=');
-    auto pattern = remap.substr(0, divider);
-    try {
-      std::regex re(pattern);
-      auto replacement = remap.substr(divider + 1);
-      remapper.addRemap(re, replacement);
-    } catch (const std::regex_error &e) {
-      errs() << "Error parsing regular expression: '" << pattern << "':\n"
-             << e.what() << "\n";
-      errors++;
-    }
-  }
-
-  if (errors) {
-    errs() << "Aborting due to " << errors;
-    errs() << " error" << ((errors > 1) ? "s" : "");
-    errs() << ".\n";
-    return EXIT_FAILURE;
-  }
-
-  std::string initOutputIndexError;
-  if (IndexUnitWriter::initIndexDirectory(OutputIndexPath,
-                                          initOutputIndexError)) {
-    errs() << "error: failed to initialize index store; "
-           << initOutputIndexError << "\n";
-    return EXIT_FAILURE;
-  }
-
-  SmallString<256> unitDirectory;
-  path::append(unitDirectory, InputIndexPath, "v5", "units");
-  SmallString<256> recordsDirectory;
-  path::append(recordsDirectory, InputIndexPath, "v5", "records");
-
-  if (not fs::is_directory(unitDirectory) ||
-      not fs::is_directory(recordsDirectory)) {
-    errs() << "error: invalid index store directory " << InputIndexPath << "\n";
-    return EXIT_FAILURE;
-  }
-
   bool success = true;
 
-  if (not cloneRecords(recordsDirectory, InputIndexPath, OutputIndexPath)) {
-    success = false;
-  }
+  for (auto &InputIndexPath : InputIndexPaths) {
+    InputIndexPath = normalizePath(InputIndexPath);
+    OutputIndexPath = normalizePath(OutputIndexPath);
 
-  FileSystemOptions fsOpts;
-  FileManager fileMgr{fsOpts};
-
-  std::error_code dirError;
-  fs::directory_iterator dir{unitDirectory, dirError};
-  fs::directory_iterator end;
-  while (dir != end && !dirError) {
-    const auto unitPath = dir->path();
-    dir.increment(dirError);
-
-    if (unitPath.empty()) {
-      // The directory iterator returns a single empty path, ignore it.
-      continue;
-    }
-
-    std::string unitReadError;
-    auto reader = IndexUnitReader::createWithFilePath(unitPath, unitReadError);
-    if (not reader) {
-      errs() << "error: failed to read unit file " << unitPath << "\n"
-             << unitReadError;
-      success = false;
-      continue;
-    }
     if (Verbose) {
-      outs() << "Remapping file " << unitPath << "\n";
+      outs() << "Remapping Index Store at: '" << InputIndexPath << "' to '"
+             << OutputIndexPath << "'\n";
     }
 
-    ModuleNameScope moduleNames;
-    auto writer = remapUnit(reader, remapper, fileMgr, moduleNames);
+    Remapper remapper;
+    // Parse the the path remapping command line flags. This converts strings of
+    // "X=Y" into a (regex, string) pair. Another way of looking at it: each
+    // remap is equivalent to the s/pattern/replacement/ operator.
+    auto errors = 0;
+    for (const auto &remap : PathRemaps) {
+      auto divider = remap.find('=');
+      auto pattern = remap.substr(0, divider);
+      try {
+        std::regex re(pattern);
+        auto replacement = remap.substr(divider + 1);
+        remapper.addRemap(re, replacement);
+      } catch (const std::regex_error &e) {
+        errs() << "Error parsing regular expression: '" << pattern << "':\n"
+               << e.what() << "\n";
+        errors++;
+      }
+    }
 
-    std::string unitWriteError;
-    if (writer.write(unitWriteError)) {
-      errs() << "error: failed to write index store; " << unitWriteError
+    if (errors) {
+      errs() << "Aborting due to " << errors;
+      errs() << " error" << ((errors > 1) ? "s" : "");
+      errs() << ".\n";
+      return EXIT_FAILURE;
+    }
+
+    std::string initOutputIndexError;
+    if (IndexUnitWriter::initIndexDirectory(OutputIndexPath,
+                                            initOutputIndexError)) {
+      errs() << "error: failed to initialize index store; "
+             << initOutputIndexError << "\n";
+      return EXIT_FAILURE;
+    }
+
+    SmallString<256> unitDirectory;
+    path::append(unitDirectory, InputIndexPath, "v5", "units");
+    SmallString<256> recordsDirectory;
+    path::append(recordsDirectory, InputIndexPath, "v5", "records");
+
+    if (not fs::is_directory(unitDirectory) ||
+        not fs::is_directory(recordsDirectory)) {
+      errs() << "error: invalid index store directory " << InputIndexPath
              << "\n";
+      return EXIT_FAILURE;
+    }
+
+    if (not cloneRecords(recordsDirectory, InputIndexPath, OutputIndexPath)) {
       success = false;
     }
-  }
 
-  if (dirError) {
-    errs() << "error: aborted while reading from unit directory: "
-           << dirError.message() << "\n";
-    success = false;
+    FileSystemOptions fsOpts;
+    FileManager fileMgr{fsOpts};
+
+    std::error_code dirError;
+    fs::directory_iterator dir{unitDirectory, dirError};
+    fs::directory_iterator end;
+    while (dir != end && !dirError) {
+      const auto unitPath = dir->path();
+      dir.increment(dirError);
+
+      if (unitPath.empty()) {
+        // The directory iterator returns a single empty path, ignore it.
+        continue;
+      }
+
+      std::string unitReadError;
+      auto reader =
+          IndexUnitReader::createWithFilePath(unitPath, unitReadError);
+      if (not reader) {
+        errs() << "error: failed to read unit file " << unitPath << "\n"
+               << unitReadError;
+        success = false;
+        continue;
+      }
+      if (Verbose) {
+        outs() << "Remapping file " << unitPath << "\n";
+      }
+
+      ModuleNameScope moduleNames;
+      auto writer = remapUnit(reader, remapper, fileMgr, moduleNames);
+
+      std::string unitWriteError;
+      if (writer.write(unitWriteError)) {
+        errs() << "error: failed to write index store; " << unitWriteError
+               << "\n";
+        success = false;
+      }
+    }
+
+    if (dirError) {
+      errs() << "error: aborted while reading from unit directory: "
+             << dirError.message() << "\n";
+      success = false;
+    }
   }
 
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
