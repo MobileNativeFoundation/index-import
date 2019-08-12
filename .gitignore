@@ -1,5 +1,3 @@
 /build/
-/tests/clang/input/
-/tests/clang/output/
-/tests/swiftc/input/
-/tests/swiftc/output/
+/tests/*/input*/
+/tests/*/output/
