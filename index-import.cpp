@@ -322,18 +322,8 @@ static bool remapIndex(const Remapper &remapper,
   return success;
 }
 
-struct RemapApplyContext {
-  bool success;
-  const Remapper &remapper;
-  const std::string &outputIndexPath;
-};
-
-static void remapIndexApply(void *userContext, size_t index) {
-  RemapApplyContext &context = *static_cast<RemapApplyContext *>(userContext);
-  std::string InputIndexPath = normalizePath(InputIndexPaths[index]);
-
-  if (not remapIndex(context.remapper, InputIndexPath, context.outputIndexPath))
-    context.success = false;
+static size_t min(size_t a, size_t b) {
+  return a < b ? a : b;
 }
 
 int main(int argc, char **argv) {
@@ -385,8 +375,21 @@ int main(int argc, char **argv) {
     return success ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 
-  RemapApplyContext applyCtx = {true, remapper, OutputIndexPath};
-  dispatch_apply_f(InputIndexPaths.size(), DISPATCH_APPLY_AUTO, &applyCtx,
-                   &remapIndexApply);
-  return applyCtx.success ? EXIT_SUCCESS : EXIT_FAILURE;
+  // Process the data stores in groups of 32.
+  const size_t STRIDE = 32;
+  const size_t length = InputIndexPaths.size();
+  size_t numStrides = (length - 1) / STRIDE + 1;
+
+  __block bool success = true;
+  dispatch_apply(numStrides, DISPATCH_APPLY_AUTO, ^(size_t strideIndex) {
+    const size_t start = strideIndex * STRIDE;
+    const size_t end = min(start + STRIDE, length);
+    for (size_t index = start; index < end; ++index) {
+      std::string InputIndexPath = normalizePath(InputIndexPaths[index]);
+
+      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath))
+        success = false;
+    }
+  });
+  return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
