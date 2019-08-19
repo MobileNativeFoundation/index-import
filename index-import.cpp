@@ -37,8 +37,10 @@ static cl::opt<bool> Verbose("verbose",
                              cl::desc("Print path remapping results"));
 static cl::alias VerboseAlias("V", cl::aliasopt(Verbose));
 
-static cl::opt<unsigned> ParallelStride("parallel-stride", cl::init(32),
-  cl::desc("Stride for parallel operations. 0 to disable parallel processing"));
+static cl::opt<unsigned> ParallelStride(
+    "parallel-stride", cl::init(32),
+    cl::desc(
+        "Stride for parallel operations. 0 to disable parallel processing"));
 
 struct Remapper {
 public:
@@ -186,8 +188,8 @@ static bool cloneRecord(StringRef from, StringRef to) {
   }
 
   // With swift-5.1, fs::copy_file supports cloning. Until then, use copyfile.
-  int failed = copyfile(from.str().c_str(), to.str().c_str(), nullptr,
-                        COPYFILE_CLONE);
+  int failed =
+      copyfile(from.str().c_str(), to.str().c_str(), nullptr, COPYFILE_CLONE);
 
   // In parallel mode we might be racing against other threads trying to create
   // the same record. To handle this, just silently drop file exists errors.
@@ -265,8 +267,7 @@ static bool remapIndex(const Remapper &remapper,
 
   if (not fs::is_directory(unitDirectory) ||
       not fs::is_directory(recordsDirectory)) {
-    errs() << "error: invalid index store directory " << InputIndexPath
-           << "\n";
+    errs() << "error: invalid index store directory " << InputIndexPath << "\n";
     return false;
   }
   bool success = true;
@@ -291,8 +292,7 @@ static bool remapIndex(const Remapper &remapper,
     }
 
     std::string unitReadError;
-    auto reader =
-        IndexUnitReader::createWithFilePath(unitPath, unitReadError);
+    auto reader = IndexUnitReader::createWithFilePath(unitPath, unitReadError);
     if (not reader) {
       errs() << "error: failed to read unit file " << unitPath << "\n"
              << unitReadError;
