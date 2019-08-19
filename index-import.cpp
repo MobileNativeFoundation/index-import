@@ -37,8 +37,8 @@ static cl::opt<bool> Verbose("verbose",
                              cl::desc("Print path remapping results"));
 static cl::alias VerboseAlias("V", cl::aliasopt(Verbose));
 
-static cl::opt<bool> DisableParallel("disable-parallel",
-                                   cl::desc("Disable any parallel processing"));
+static cl::opt<unsigned> ParallelStride("parallel-stride", cl::init(32),
+  cl::desc("Stride for parallel operations. 0 to disable parallel processing"));
 
 struct Remapper {
 public:
@@ -322,10 +322,6 @@ static bool remapIndex(const Remapper &remapper,
   return success;
 }
 
-static size_t min(size_t a, size_t b) {
-  return a < b ? a : b;
-}
-
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
@@ -364,7 +360,7 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  if (DisableParallel) {
+  if (ParallelStride == 0 || ParallelStride >= InputIndexPaths.size()) {
     bool success = true;
     for (auto &InputIndexPath : InputIndexPaths) {
       InputIndexPath = normalizePath(InputIndexPath);
@@ -375,15 +371,15 @@ int main(int argc, char **argv) {
     return success ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 
-  // Process the data stores in groups of 32.
-  const size_t STRIDE = 32;
+  // Process the data stores in groups according to the parallel stride.
+  const size_t stride = static_cast<size_t>(ParallelStride);
   const size_t length = InputIndexPaths.size();
-  size_t numStrides = (length - 1) / STRIDE + 1;
+  const size_t numStrides = (length - 1) / stride + 1;
 
   __block bool success = true;
   dispatch_apply(numStrides, DISPATCH_APPLY_AUTO, ^(size_t strideIndex) {
-    const size_t start = strideIndex * STRIDE;
-    const size_t end = min(start + STRIDE, length);
+    const size_t start = strideIndex * stride;
+    const size_t end = std::min(start + stride, length);
     for (size_t index = start; index < end; ++index) {
       std::string InputIndexPath = normalizePath(InputIndexPaths[index]);
 
