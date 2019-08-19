@@ -374,7 +374,7 @@ int main(int argc, char **argv) {
   // Process the data stores in groups according to the parallel stride.
   const size_t stride = static_cast<size_t>(ParallelStride);
   const size_t length = InputIndexPaths.size();
-  const size_t numStrides = (length - 1) / stride + 1;
+  const size_t numStrides = ((length - 1) / stride) + 1;
 
   __block bool success = true;
   dispatch_apply(numStrides, DISPATCH_APPLY_AUTO, ^(size_t strideIndex) {
