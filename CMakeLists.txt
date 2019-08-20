@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
+if(COMMAND project)
+  project(index-import)
+endif()
 
 find_package(Clang CONFIG REQUIRED)
 
