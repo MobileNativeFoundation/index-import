@@ -77,6 +77,7 @@ xcrun clang -fsyntax-only -index-store-path input2 input2.c
 # Test index-import by matching its verbose output.
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
 ../../build/index-import -V \
+  -parallel-stride 1 \
   -remap 'input(.).c.o=output$1.c.o' \
   -remap "$(pwd)"=/fake/working/dir \
   input1 input2 output \
