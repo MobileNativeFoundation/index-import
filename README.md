@@ -64,7 +64,7 @@ index-import \
 
 ## Build Instructions
 
-The build uses [CMake](https://cmake.org) because [swift-clang](https://www.github.com/apple/swift-clang) uses CMake. The `index-import` build script is small, but depends on the larger swift-clang project. To build `index-import`, first build swift-clang using the [Swift build instructions](https://github.com/apple/swift#building-swift). Be sure to checkout a release branch of swift, not `master`, for example `swift-5.0-branch`.
+The build uses [CMake](https://cmake.org) because [swift-clang](https://www.github.com/apple/swift-clang) uses CMake. The `index-import` build script is small, but depends on the larger swift-clang project. To build `index-import`, first build swift-clang using the [Swift build instructions](https://github.com/apple/swift#system-requirements). Be sure to checkout a release branch of swift, not `master`, for example `swift-5.0-branch`.
 
 Once swift has been built, `index-import` can be built as follows. The key step is to add the llvm `bin` directory from the swift build, to your `PATH`. This ensures CMake can find the build files it needs.
 
