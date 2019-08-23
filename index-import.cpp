@@ -14,6 +14,8 @@
 
 #include <copyfile.h>
 
+#include <dispatch/dispatch.h>
+
 using namespace llvm;
 using namespace llvm::sys;
 using namespace clang;
@@ -34,6 +36,11 @@ static cl::opt<std::string> OutputIndexPath(cl::Positional, cl::Required,
 static cl::opt<bool> Verbose("verbose",
                              cl::desc("Print path remapping results"));
 static cl::alias VerboseAlias("V", cl::aliasopt(Verbose));
+
+static cl::opt<unsigned> ParallelStride(
+    "parallel-stride", cl::init(32),
+    cl::desc(
+        "Stride for parallel operations. 0 to disable parallel processing"));
 
 struct Remapper {
 public:
@@ -172,17 +179,21 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
   return writer;
 }
 
-static int cloneRecord(StringRef from, StringRef to) {
+static bool cloneRecord(StringRef from, StringRef to) {
   // Two record files of the same name are guaranteed to have the same
   // contents, because the filename contains a hash of its contents. If the
   // destination record file already exists, no action needs to be taken.
   if (fs::exists(to)) {
-    return 0;
+    return true;
   }
 
   // With swift-5.1, fs::copy_file supports cloning. Until then, use copyfile.
-  return copyfile(from.str().c_str(), to.str().c_str(), nullptr,
-                  COPYFILE_CLONE);
+  int failed =
+      copyfile(from.str().c_str(), to.str().c_str(), nullptr, COPYFILE_CLONE);
+
+  // In parallel mode we might be racing against other threads trying to create
+  // the same record. To handle this, just silently drop file exists errors.
+  return (failed == 0 || errno == EEXIST);
 }
 
 static bool cloneRecords(StringRef recordsDirectory,
@@ -214,8 +225,7 @@ static bool cloneRecords(StringRef recordsDirectory,
                << "`: " << failed.message() << "\n";
       }
     } else if (status->type() == fs::file_type::regular_file) {
-      auto failed = cloneRecord(inputPath, outputPath);
-      if (failed) {
+      if (not cloneRecord(inputPath, outputPath)) {
         success = false;
         errs() << "Could not copy record file from `" << inputPath << "` to `"
                << outputPath << "`: " << strerror(errno) << "\n";
@@ -233,13 +243,83 @@ static bool cloneRecords(StringRef recordsDirectory,
 }
 
 // Normalize a path by removing /./ or // from it.
-std::string normalizePath(StringRef Path) {
+static std::string normalizePath(StringRef Path) {
   SmallString<128> NormalizedPath;
   for (auto I = path::begin(Path), E = path::end(Path); I != E; ++I) {
     if (*I != ".")
       sys::path::append(NormalizedPath, *I);
   }
   return NormalizedPath.str();
+}
+
+static bool remapIndex(const Remapper &remapper,
+                       const std::string &InputIndexPath,
+                       const std::string &outputIndexPath) {
+  if (Verbose) {
+    outs() << "Remapping Index Store at: '" << InputIndexPath << "' to '"
+           << OutputIndexPath << "'\n";
+  }
+
+  SmallString<256> unitDirectory;
+  path::append(unitDirectory, InputIndexPath, "v5", "units");
+  SmallString<256> recordsDirectory;
+  path::append(recordsDirectory, InputIndexPath, "v5", "records");
+
+  if (not fs::is_directory(unitDirectory) ||
+      not fs::is_directory(recordsDirectory)) {
+    errs() << "error: invalid index store directory " << InputIndexPath << "\n";
+    return false;
+  }
+  bool success = true;
+
+  if (not cloneRecords(recordsDirectory, InputIndexPath, outputIndexPath)) {
+    success = false;
+  }
+
+  FileSystemOptions fsOpts;
+  FileManager fileMgr{fsOpts};
+
+  std::error_code dirError;
+  fs::directory_iterator dir{unitDirectory, dirError};
+  fs::directory_iterator end;
+  while (dir != end && !dirError) {
+    const auto unitPath = dir->path();
+    dir.increment(dirError);
+
+    if (unitPath.empty()) {
+      // The directory iterator returns a single empty path, ignore it.
+      continue;
+    }
+
+    std::string unitReadError;
+    auto reader = IndexUnitReader::createWithFilePath(unitPath, unitReadError);
+    if (not reader) {
+      errs() << "error: failed to read unit file " << unitPath << "\n"
+             << unitReadError;
+      success = false;
+      continue;
+    }
+    if (Verbose) {
+      outs() << "Remapping file " << unitPath << "\n";
+    }
+
+    ModuleNameScope moduleNames;
+    auto writer = remapUnit(reader, remapper, fileMgr, moduleNames);
+
+    std::string unitWriteError;
+    if (writer.write(unitWriteError)) {
+      errs() << "error: failed to write index store; " << unitWriteError
+             << "\n";
+      success = false;
+    }
+  }
+
+  if (dirError) {
+    errs() << "error: aborted while reading from unit directory: "
+           << dirError.message() << "\n";
+    success = false;
+  }
+  return success;
 }
 
 int main(int argc, char **argv) {
@@ -280,77 +360,32 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  bool success = true;
+  if (ParallelStride == 0 || ParallelStride >= InputIndexPaths.size()) {
+    bool success = true;
+    for (auto &InputIndexPath : InputIndexPaths) {
+      InputIndexPath = normalizePath(InputIndexPath);
 
-  for (auto &InputIndexPath : InputIndexPaths) {
-    InputIndexPath = normalizePath(InputIndexPath);
-
-    if (Verbose) {
-      outs() << "Remapping Index Store at: '" << InputIndexPath << "' to '"
-             << OutputIndexPath << "'\n";
-    }
-
-    SmallString<256> unitDirectory;
-    path::append(unitDirectory, InputIndexPath, "v5", "units");
-    SmallString<256> recordsDirectory;
-    path::append(recordsDirectory, InputIndexPath, "v5", "records");
-
-    if (not fs::is_directory(unitDirectory) ||
-        not fs::is_directory(recordsDirectory)) {
-      errs() << "error: invalid index store directory " << InputIndexPath
-             << "\n";
-      return EXIT_FAILURE;
-    }
-
-    if (not cloneRecords(recordsDirectory, InputIndexPath, OutputIndexPath)) {
-      success = false;
-    }
-
-    FileSystemOptions fsOpts;
-    FileManager fileMgr{fsOpts};
-
-    std::error_code dirError;
-    fs::directory_iterator dir{unitDirectory, dirError};
-    fs::directory_iterator end;
-    while (dir != end && !dirError) {
-      const auto unitPath = dir->path();
-      dir.increment(dirError);
-
-      if (unitPath.empty()) {
-        // The directory iterator returns a single empty path, ignore it.
-        continue;
-      }
-
-      std::string unitReadError;
-      auto reader =
-          IndexUnitReader::createWithFilePath(unitPath, unitReadError);
-      if (not reader) {
-        errs() << "error: failed to read unit file " << unitPath << "\n"
-               << unitReadError;
+      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath))
         success = false;
-        continue;
-      }
-      if (Verbose) {
-        outs() << "Remapping file " << unitPath << "\n";
-      }
-
-      ModuleNameScope moduleNames;
-      auto writer = remapUnit(reader, remapper, fileMgr, moduleNames);
-
-      std::string unitWriteError;
-      if (writer.write(unitWriteError)) {
-        errs() << "error: failed to write index store; " << unitWriteError
-               << "\n";
-        success = false;
-      }
     }
-
-    if (dirError) {
-      errs() << "error: aborted while reading from unit directory: "
-             << dirError.message() << "\n";
-      success = false;
-    }
+    return success ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 
+  // Process the data stores in groups according to the parallel stride.
+  const size_t stride = static_cast<size_t>(ParallelStride);
+  const size_t length = InputIndexPaths.size();
+  const size_t numStrides = ((length - 1) / stride) + 1;
+
+  __block bool success = true;
+  dispatch_apply(numStrides, DISPATCH_APPLY_AUTO, ^(size_t strideIndex) {
+    const size_t start = strideIndex * stride;
+    const size_t end = std::min(start + stride, length);
+    for (size_t index = start; index < end; ++index) {
+      std::string InputIndexPath = normalizePath(InputIndexPaths[index]);
+
+      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath))
+        success = false;
+    }
+  });
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
