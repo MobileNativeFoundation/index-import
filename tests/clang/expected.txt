@@ -1,5 +1,5 @@
 CHECK: Remapping Index Store at: 'input' to 'output'
-CHECK: Remapping file input/v5/units/input.c.o-7GYKMSFATPVS
+CHECK: Remapping file input/v5/units/input.c.o-
 CHECK: MainFilePath: input.c
 CHECK: OutputFile: output.c.o
 CHECK: WorkingDir: /fake/working/dir

@@ -1,0 +1,61 @@
+trigger:
+- master
+
+pr:
+  autoCancel: true
+  branches:
+    include:
+    - master
+
+jobs:
+- job: macOS
+  timeoutInMinutes: 360
+  displayName: macOS
+  # According to
+  # https://github.com/Microsoft/azure-pipelines-image-generation/blob/master/images/macos/macos-10.14-Readme.md
+  # macOS-10.14 comes with Xcode 10.2.1
+  pool:
+    displayName: 'macOS 10.14'
+    vmImage: 'macOS-10.14'
+    demands: xcode
+  steps:
+  - script: 'brew install ninja cmake lrzip'
+    displayName: 'Installing build dependencies'
+
+  - task: DownloadGitHubRelease@0
+    inputs:
+      connection: GHRelease
+      userRepository: ob/swift-prebuilt
+      defaultVersionType: 'specificTag' # Options: latest, specificVersion, specificTag
+      version: 'swift-5.0.1-RELEASE-20190824.1' # Required when defaultVersionType != Latest
+      itemPattern: '*.lrzip' # Optional
+      downloadPath: 'downloads' 
+
+  - script: |
+      lrzcat downloads/swift-source.tar.lrzip | tar -C /tmp -x -v -f -
+      lrzcat downloads/llvm-*.lrzip | tar -C /tmp/swift-source -x -v -f -
+    displayName: 'Unpack Dependencies'
+
+  - script: |
+      mkdir build
+      (cd build ; PATH=/tmp/swift-source/build/Ninja-RelWithDebInfoAssert/llvm-macosx-x86_64/bin:$PATH cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..)
+      (cd build ; ninja)
+      (cd build ; zip index-import.zip index-import)
+    displayName: 'Building index-import'
+
+  - script: |
+      (cd tests ; PATH=/tmp/swift-source/build/Ninja-RelWithDebInfoAssert/llvm-macosx-x86_64/bin:$PATH ./run.sh)
+    displayName: 'Testing index-import'
+
+  - task: GitHubRelease@0
+    inputs:
+      gitHubConnection: GHRelease
+      repositoryName: '$(Build.Repository.Name)'
+      action: 'create' # Options: create, edit, delete
+      target: '$(Build.SourceVersion)' # Required when action == Create || Action == Edit
+      tagSource: 'manual' # Required when action == Create# Options: auto, manual
+      tag: 'v5.0.1-$(Build.BuildNumber)'
+      assets: 'build/index-import.zip'
+      #releaseNotesSource: 'file' # Optional. Options: file, input
+      #releaseNotesFile: '' # Optional
+

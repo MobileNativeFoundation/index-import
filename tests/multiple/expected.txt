@@ -1,5 +1,5 @@
 CHECK-DAG: Remapping Index Store at: 'input1' to 'output'
-CHECK-DAG: Remapping file input1/v5/units/input1.c.o-2XOJVCVQRKPMV
+CHECK-DAG: Remapping file input1/v5/units/input1.c.o-
 CHECK-DAG: MainFilePath: input1.c
 CHECK-DAG: OutputFile: output1.c.o
 CHECK-DAG: WorkingDir: /fake/working/dir
@@ -7,7 +7,7 @@ CHECK-DAG: SysrootPath: {{/.*}}/Contents/Developer/Platforms/MacOSX.platform/Dev
 CHECK-DAG: DependencyFilePath: input1.c
 
 CHECK-DAG: Remapping Index Store at: 'input2' to 'output'
-CHECK-DAG: Remapping file input2/v5/units/input2.c.o-1F2C0MY9VWEXX
+CHECK-DAG: Remapping file input2/v5/units/input2.c.o-
 CHECK-DAG: MainFilePath: input2.c
 CHECK-DAG: OutputFile: output2.c.o
 CHECK-DAG: WorkingDir: /fake/working/dir
