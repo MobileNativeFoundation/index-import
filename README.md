@@ -80,13 +80,13 @@ Building all of Swift can take a long time, and most of that isn't needed by `in
 ninja -C build/Ninja-ReleaseAssert/llvm-macosx-x86_64 libIndexStore.dylib
 ```
 
-Once swift (or `libIndexStore.dylib`) has been built, `index-import` can be built as follows. The _key_ step is to update your `PATH` variable to include the llvm `bin/` directory (from the swift build). This ensures CMake can find all necessary build dependencies.
+Once swift (or `libIndexStore.dylib`) has been built, `index-import` can be built as follows. The _key_ step is to update your `PATH` variable to include the llvm `bin/` directory (from the swift-source build directory). This ensures CMake can find all necessary build dependencies.
 
 ```sh
 # From the index-import directory
 mkdir build
 cd build
-PATH="path/to/swift/build/Ninja-ReleaseAssert/llvm-macosx-x86_64/bin:$PATH"
+PATH="path/to/swift-source/build/Ninja-ReleaseAssert/llvm-macosx-x86_64/bin:$PATH"
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
 ninja
 ```
