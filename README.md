@@ -71,7 +71,7 @@ When building Swift, keep the following in mind:
 1. Checkout the desired release branch of Swift
 2. Build Swift using `--release`/`-R` for performance
 
-To checkout a specific version of Swift, use the `update-checkout` script. For example: `./swift/utils/update-checkout --scheme swift-5.0-branch`.
+To checkout a specific version of Swift, use the `update-checkout` script. For example: `./swift/utils/update-checkout --clone --tag swift-5.0.1-RELEASE`.
 
 Building all of Swift can take a long time, and most of that isn't needed by `index-import`. A faster way to build `index-import`, is to build only `libIndexStore.dylib`. Here are the commands to do just that:
 
