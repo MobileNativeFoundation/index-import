@@ -64,14 +64,29 @@ index-import \
 
 ## Build Instructions
 
-The build uses [CMake](https://cmake.org) because [swift-clang](https://www.github.com/apple/swift-clang) uses CMake. The `index-import` build script is small, but depends on the larger swift-clang project. To build `index-import`, first build swift-clang using the [Swift build instructions](https://github.com/apple/swift#system-requirements). Be sure to checkout a release branch of swift, not `master`, for example `swift-5.0-branch`.
+The build uses [CMake](https://cmake.org) because [swift-clang](https://www.github.com/apple/swift-clang) uses CMake. The `index-import` build script is small, but depends on the larger swift-clang project. To build `index-import`, first [install the tools required by Swift](https://github.com/apple/swift#system-requirements), then build swift-clang by following the [Swift build instructions](https://github.com/apple/swift#building-swift).
 
-Once swift has been built, `index-import` can be built as follows. The key step is to add the llvm `bin` directory from the swift build, to your `PATH`. This ensures CMake can find the build files it needs.
+When building Swift, keep the following in mind:
 
+1. Checkout the desired release branch of Swift
+2. Build Swift using `--release`/`-R` for performance
+
+To checkout a specific version of Swift, use the `update-checkout` script. For example: `./swift/utils/update-checkout --clone --tag swift-5.0.1-RELEASE`.
+
+Building all of Swift can take a long time, and most of that isn't needed by `index-import`. A faster way to build `index-import`, is to build only `libIndexStore.dylib`. Here are the commands to do just that:
+
+```sh
+./swift/utils/build-script --release --skip-build --llvm-targets-to-build X86
+ninja -C build/Ninja-ReleaseAssert/llvm-macosx-x86_64 libIndexStore.dylib
 ```
+
+Once swift (or `libIndexStore.dylib`) has been built, `index-import` can be built as follows. The _key_ step is to update your `PATH` variable to include the llvm `bin/` directory (from the swift-source build directory). This ensures CMake can find all necessary build dependencies.
+
+```sh
+# From the index-import directory
 mkdir build
 cd build
-PATH="path/to/swift/build/Ninja-ReleaseAssert/llvm-macosx-x86_64/bin:$PATH"
+PATH="path/to/swift-source/build/Ninja-ReleaseAssert/llvm-macosx-x86_64/bin:$PATH"
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
 ninja
 ```
