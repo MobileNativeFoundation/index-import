@@ -8,7 +8,6 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <mutex>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -382,7 +381,7 @@ int main(int argc, char **argv) {
   const size_t length = InputIndexPaths.size();
   const size_t numStrides = ((length - 1) / stride) + 1;
 
-  static std::mutex lock{};
+  auto lock = dispatch_semaphore_create(1);
   __block bool success = true;
   dispatch_apply(numStrides, DISPATCH_APPLY_AUTO, ^(size_t strideIndex) {
     const size_t start = strideIndex * stride;
@@ -396,8 +395,9 @@ int main(int argc, char **argv) {
       }
 
       if (Verbose) {
-        std::lock_guard<decltype(lock)> guard{lock};
+        dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
         std::cout << outs.str();
+        dispatch_semaphore_signal(lock);
       }
     }
   });
