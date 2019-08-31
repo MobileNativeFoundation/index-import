@@ -401,5 +401,7 @@ int main(int argc, char **argv) {
       }
     }
   });
+  dispatch_release(lock);
+
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
