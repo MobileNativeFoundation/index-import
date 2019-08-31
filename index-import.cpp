@@ -7,8 +7,11 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdlib>
+#include <iostream>
+#include <mutex>
 #include <regex>
 #include <set>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -98,7 +101,8 @@ private:
 
 static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
                                  const Remapper &remapper, FileManager &fileMgr,
-                                 ModuleNameScope &moduleNames) {
+                                 ModuleNameScope &moduleNames,
+                                 std::ostream &outs) {
   // The set of remapped paths.
   auto workingDir = remapper.remap(reader->getWorkingDirectory());
   auto outputFile = remapper.remap(reader->getOutputFile());
@@ -106,10 +110,10 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
   auto sysrootPath = remapper.remap(reader->getSysrootPath());
 
   if (Verbose) {
-    outs() << "MainFilePath: " << mainFilePath << "\n"
-           << "OutputFile: " << outputFile << "\n"
-           << "WorkingDir: " << workingDir << "\n"
-           << "SysrootPath: " << sysrootPath << "\n";
+    outs << "MainFilePath: " << mainFilePath << "\n"
+         << "OutputFile: " << outputFile << "\n"
+         << "WorkingDir: " << workingDir << "\n"
+         << "SysrootPath: " << sysrootPath << "\n";
   }
 
   auto &fsOpts = fileMgr.getFileSystemOpts();
@@ -138,7 +142,7 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
     }
 
     if (Verbose) {
-      outs() << "DependencyFilePath: " << filePath << "\n";
+      outs << "DependencyFilePath: " << filePath << "\n";
     }
 
     switch (info.Kind) {
@@ -152,7 +156,7 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
       if (name != "") {
         writer.getUnitNameForOutputFile(filePath, unitName);
         if (Verbose) {
-          outs() << "DependencyUnitName: " << unitName << "\n";
+          outs << "DependencyUnitName: " << unitName.c_str() << "\n";
         }
       }
 
@@ -254,10 +258,10 @@ static std::string normalizePath(StringRef Path) {
 
 static bool remapIndex(const Remapper &remapper,
                        const std::string &InputIndexPath,
-                       const std::string &outputIndexPath) {
+                       const std::string &outputIndexPath, std::ostream &outs) {
   if (Verbose) {
-    outs() << "Remapping Index Store at: '" << InputIndexPath << "' to '"
-           << OutputIndexPath << "'\n";
+    outs << "Remapping Index Store at: '" << InputIndexPath << "' to '"
+         << OutputIndexPath << "'\n";
   }
 
   SmallString<256> unitDirectory;
@@ -300,11 +304,11 @@ static bool remapIndex(const Remapper &remapper,
       continue;
     }
     if (Verbose) {
-      outs() << "Remapping file " << unitPath << "\n";
+      outs << "Remapping file " << unitPath << "\n";
     }
 
     ModuleNameScope moduleNames;
-    auto writer = remapUnit(reader, remapper, fileMgr, moduleNames);
+    auto writer = remapUnit(reader, remapper, fileMgr, moduleNames, outs);
 
     std::string unitWriteError;
     if (writer.write(unitWriteError)) {
@@ -365,8 +369,10 @@ int main(int argc, char **argv) {
     for (auto &InputIndexPath : InputIndexPaths) {
       InputIndexPath = normalizePath(InputIndexPath);
 
-      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath))
+      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath,
+                         std::cout)) {
         success = false;
+      }
     }
     return success ? EXIT_SUCCESS : EXIT_FAILURE;
   }
@@ -376,6 +382,7 @@ int main(int argc, char **argv) {
   const size_t length = InputIndexPaths.size();
   const size_t numStrides = ((length - 1) / stride) + 1;
 
+  static std::mutex lock{};
   __block bool success = true;
   dispatch_apply(numStrides, DISPATCH_APPLY_AUTO, ^(size_t strideIndex) {
     const size_t start = strideIndex * stride;
@@ -383,8 +390,15 @@ int main(int argc, char **argv) {
     for (size_t index = start; index < end; ++index) {
       std::string InputIndexPath = normalizePath(InputIndexPaths[index]);
 
-      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath))
+      std::ostringstream outs;
+      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath, outs)) {
         success = false;
+      }
+
+      if (Verbose) {
+        std::lock_guard<decltype(lock)> guard{lock};
+        std::cout << outs.str();
+      }
     }
   });
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
