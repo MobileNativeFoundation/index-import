@@ -390,7 +390,7 @@ int main(int argc, char **argv) {
     for (size_t index = start; index < end; ++index) {
       std::string InputIndexPath = normalizePath(InputIndexPaths[index]);
 
-      std::ostringstream outs;
+      std::ostringstream outs{};
       if (not remapIndex(remapper, InputIndexPath, OutputIndexPath, outs)) {
         success = false;
       }
