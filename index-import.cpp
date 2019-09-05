@@ -101,7 +101,7 @@ private:
 static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
                                  const Remapper &remapper, FileManager &fileMgr,
                                  ModuleNameScope &moduleNames,
-                                 std::ostream &outs) {
+                                 std::ostream *outs) {
   // The set of remapped paths.
   auto workingDir = remapper.remap(reader->getWorkingDirectory());
   auto outputFile = remapper.remap(reader->getOutputFile());
@@ -109,10 +109,10 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
   auto sysrootPath = remapper.remap(reader->getSysrootPath());
 
   if (Verbose) {
-    outs << "MainFilePath: " << mainFilePath << "\n"
-         << "OutputFile: " << outputFile << "\n"
-         << "WorkingDir: " << workingDir << "\n"
-         << "SysrootPath: " << sysrootPath << "\n";
+    *outs << "MainFilePath: " << mainFilePath << "\n"
+          << "OutputFile: " << outputFile << "\n"
+          << "WorkingDir: " << workingDir << "\n"
+          << "SysrootPath: " << sysrootPath << "\n";
   }
 
   auto &fsOpts = fileMgr.getFileSystemOpts();
@@ -141,7 +141,7 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
     }
 
     if (Verbose) {
-      outs << "DependencyFilePath: " << filePath << "\n";
+      *outs << "DependencyFilePath: " << filePath << "\n";
     }
 
     switch (info.Kind) {
@@ -155,7 +155,7 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
       if (name != "") {
         writer.getUnitNameForOutputFile(filePath, unitName);
         if (Verbose) {
-          outs << "DependencyUnitName: " << unitName.c_str() << "\n";
+          *outs << "DependencyUnitName: " << unitName.c_str() << "\n";
         }
       }
 
@@ -257,10 +257,10 @@ static std::string normalizePath(StringRef Path) {
 
 static bool remapIndex(const Remapper &remapper,
                        const std::string &InputIndexPath,
-                       const std::string &outputIndexPath, std::ostream &outs) {
+                       const std::string &outputIndexPath, std::ostream *outs) {
   if (Verbose) {
-    outs << "Remapping Index Store at: '" << InputIndexPath << "' to '"
-         << OutputIndexPath << "'\n";
+    *outs << "Remapping Index Store at: '" << InputIndexPath << "' to '"
+          << OutputIndexPath << "'\n";
   }
 
   SmallString<256> unitDirectory;
@@ -303,7 +303,7 @@ static bool remapIndex(const Remapper &remapper,
       continue;
     }
     if (Verbose) {
-      outs << "Remapping file " << unitPath << "\n";
+      *outs << "Remapping file " << unitPath << "\n";
     }
 
     ModuleNameScope moduleNames;
@@ -369,7 +369,7 @@ int main(int argc, char **argv) {
       InputIndexPath = normalizePath(InputIndexPath);
 
       if (not remapIndex(remapper, InputIndexPath, OutputIndexPath,
-                         std::cout)) {
+                         &std::cout)) {
         success = false;
       }
     }
@@ -390,7 +390,7 @@ int main(int argc, char **argv) {
       std::string InputIndexPath = normalizePath(InputIndexPaths[index]);
 
       std::ostringstream outs{};
-      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath, outs)) {
+      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath, &outs)) {
         success = false;
       }
 
