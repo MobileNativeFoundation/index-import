@@ -115,7 +115,7 @@ static bool isUnitUpToDate(StringRef outputFile,
 }
 
 // Returns None if the Unit file is already up to date
-static Optional<IndexUnitWriter> remapUnit(const std::string &inputUnitPath,
+static Optional<IndexUnitWriter> remapUnit(StringRef inputUnitPath,
                                            const std::unique_ptr<IndexUnitReader> &reader,
                                            const Remapper &remapper, FileManager &fileMgr,
                                            ModuleNameScope &moduleNames,
