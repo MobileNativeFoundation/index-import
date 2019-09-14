@@ -98,10 +98,28 @@ private:
   std::set<StringRef> _moduleNames;
 };
 
-static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
-                                 const Remapper &remapper, FileManager &fileMgr,
-                                 ModuleNameScope &moduleNames,
-                                 std::ostream *outs) {
+// Returns true if the Unit file of given output file already exists and is
+// older than the input file.
+static bool isUnitUpToDate(StringRef outputFile,
+                           StringRef inputFile,
+                           IndexUnitWriter &writer) {
+  std::string error;
+  auto IsUptodateOpt = writer.isUnitUpToDateForOutputFile(outputFile, inputFile, error);
+  if (!IsUptodateOpt.hasValue()) {
+    errs() << "error: failed file status check:\n"
+      << error << "\n";
+    return false;
+  }
+  
+  return *IsUptodateOpt;
+}
+
+// Returns None if the Unit file is already up to date
+static Optional<IndexUnitWriter> remapUnit(const std::string &inputUnitPath,
+                                           const std::unique_ptr<IndexUnitReader> &reader,
+                                           const Remapper &remapper, FileManager &fileMgr,
+                                           ModuleNameScope &moduleNames,
+                                           std::ostream *outs) {
   // The set of remapped paths.
   auto workingDir = remapper.remap(reader->getWorkingDirectory());
   auto outputFile = remapper.remap(reader->getOutputFile());
@@ -124,6 +142,13 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
       fileMgr.getFile(mainFilePath), reader->isSystemUnit(),
       reader->isModuleUnit(), reader->isDebugCompilation(), reader->getTarget(),
       sysrootPath, moduleNames.getModuleInfo);
+  
+  // Check if the unit file is already up to date
+  SmallString<256> outputFileFullPath;
+  path::append(outputFileFullPath, workingDir, outputFile);
+  if (isUnitUpToDate(outputFileFullPath, inputUnitPath, writer)) {
+    return None;
+  }
 
   reader->foreachDependency([&](const IndexUnitReader::DependencyInfo &info) {
     const auto name = info.UnitOrRecordName;
@@ -307,13 +332,14 @@ static bool remapIndex(const Remapper &remapper,
     }
 
     ModuleNameScope moduleNames;
-    auto writer = remapUnit(reader, remapper, fileMgr, moduleNames, outs);
-
-    std::string unitWriteError;
-    if (writer.write(unitWriteError)) {
-      errs() << "error: failed to write index store; " << unitWriteError
-             << "\n";
-      success = false;
+    auto writer = remapUnit(unitPath, reader, remapper, fileMgr, moduleNames, outs);
+    if (writer.hasValue()) {
+      std::string unitWriteError;
+      if (writer->write(unitWriteError)) {
+        errs() << "error: failed to write index store; " << unitWriteError
+        << "\n";
+        success = false;
+      }
     }
   }
 
