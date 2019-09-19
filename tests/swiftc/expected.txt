@@ -1,5 +1,5 @@
 CHECK: Remapping Index Store at: 'input' to 'output'
-CHECK: Remapping file input/v5/units/input.o-WJTHFC1KVBQ8
+CHECK: Remapping file input/v5/units/input.o-
 CHECK: MainFilePath: /fake/working/dir/input.swift
 CHECK: OutputFile: output.o
 CHECK: WorkingDir: /fake/working/dir
