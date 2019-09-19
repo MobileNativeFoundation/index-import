@@ -90,3 +90,9 @@ PATH="path/to/swift-source/build/Ninja-ReleaseAssert/llvm-macosx-x86_64/bin:$PAT
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
 ninja
 ```
+
+Or, if you prefer Xcode for building and debugging, you can replace the last 2 lines with the following:
+```
+cmake -G Xcode -DCMAKE_BUILD_TYPE=Release ..
+open index-import.xcodeproj
+```
