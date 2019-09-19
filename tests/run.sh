@@ -4,6 +4,10 @@ set -euo pipefail
 
 readonly base_dir=$(dirname "$0")
 
+clang() {
+    xcrun --sdk macosx clang "$@"
+}
+
 ############################################################
 
 echo "Testing clang indexes"
@@ -13,7 +17,7 @@ pushd "$base_dir"/clang >/dev/null
 rm -fr input output
 
 # Produce the index.
-xcrun clang -fsyntax-only -index-store-path input input.c
+clang -fsyntax-only -index-store-path input input.c
 
 # Test index-import by matching its verbose output.
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
@@ -71,8 +75,8 @@ pushd "$base_dir"/multiple >/dev/null
 rm -fr input1 input2 output
 
 # Produce the two indexes.
-xcrun clang -fsyntax-only -index-store-path input1 input1.c
-xcrun clang -fsyntax-only -index-store-path input2 input2.c
+clang -fsyntax-only -index-store-path input1 input1.c
+clang -fsyntax-only -index-store-path input2 input2.c
 
 # Test index-import by matching its verbose output.
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
