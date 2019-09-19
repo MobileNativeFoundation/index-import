@@ -3,7 +3,7 @@ CHECK-DAG: Remapping file input1/v5/units/input1.c.o-
 CHECK-DAG: MainFilePath: input1.c
 CHECK-DAG: OutputFile: output1.c.o
 CHECK-DAG: WorkingDir: /fake/working/dir
-CHECK-DAG: SysrootPath: {{/.*}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk
+CHECK-DAG: SysrootPath: {{/.*}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.{{[0-9]+}}.sdk
 CHECK-DAG: DependencyFilePath: input1.c
 
 CHECK-DAG: Remapping Index Store at: 'input2' to 'output'
@@ -11,5 +11,5 @@ CHECK-DAG: Remapping file input2/v5/units/input2.c.o-
 CHECK-DAG: MainFilePath: input2.c
 CHECK-DAG: OutputFile: output2.c.o
 CHECK-DAG: WorkingDir: /fake/working/dir
-CHECK-DAG: SysrootPath: {{/.*}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk
+CHECK-DAG: SysrootPath: {{/.*}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.{{[0-9]+}}.sdk
 CHECK-DAG: DependencyFilePath: input2.c

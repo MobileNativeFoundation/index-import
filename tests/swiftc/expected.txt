@@ -4,5 +4,4 @@ CHECK: MainFilePath: /fake/working/dir/input.swift
 CHECK: OutputFile: output.o
 CHECK: WorkingDir: /fake/working/dir
 CHECK: SysrootPath: {{/.*}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.{{[0-9]+}}.sdk
-CHECK: DependencyFilePath: {{/.*}}/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/x86_64/Swift.swiftmodule
-
+CHECK: DependencyFilePath: {{/.*}}/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/{{[^/]+}}/Swift.swiftmodule
