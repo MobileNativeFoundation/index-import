@@ -175,6 +175,10 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
   reader->foreachInclude([&](const IndexUnitReader::IncludeInfo &info) {
     const auto sourcePath = remapper.remap(info.SourcePath);
     const auto targetPath = remapper.remap(info.TargetPath);
+    if (Verbose) {
+      *outs << "SourcePath: " << sourcePath << "\n"
+            << "TargetPath: " << targetPath << "\n";
+    }
 
     // Note this isn't relevant to Swift.
     writer.addInclude(fileMgr.getFile(sourcePath), info.SourceLine,
