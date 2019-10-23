@@ -44,7 +44,7 @@ index-import \
     "$build_dir2/Index/DataStore"
 ```
 
-A more complex example is importing an index from a [Bazel](https://bazel.build) built project. This example makes would be run as an Xcode "Run Script" build phase, which provides many environment variables, including: `SRCROOT`, `CONFIGURATION_TEMP_DIR`, `ARCHS`.
+A more complex example is importing an index from a [Bazel](https://bazel.build) built project. This example would be run as an Xcode "Run Script" build phase, which provides many environment variables, including: `SRCROOT`, `CONFIGURATION_TEMP_DIR`, `ARCHS`.
 
 ```sh
 #!/bin/bash
@@ -72,6 +72,8 @@ When building Swift, keep the following in mind:
 2. Build Swift using `--release`/`-R` for performance
 
 To checkout a specific version of Swift, use the `update-checkout` script. For example: `./swift/utils/update-checkout --clone --tag swift-5.0.1-RELEASE`.
+
+_note: `./swift/utils/update-checkout` may fail and exit successfully if the tag doesn't exist. e.g. llvm doesn't have the tag swift-5.0.1-RELEASE. Fix by checking out the swift-5.0-branch_
 
 Building all of Swift can take a long time, and most of that isn't needed by `index-import`. A faster way to build `index-import`, is to build only `libIndexStore.dylib`. Here are the commands to do just that:
 
