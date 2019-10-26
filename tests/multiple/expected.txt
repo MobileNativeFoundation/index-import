@@ -1,15 +1,39 @@
-CHECK-DAG: Remapping Index Store at: 'input1' to 'output'
-CHECK-DAG: Remapping file input1/v5/units/input1.c.o-
-CHECK-DAG: MainFilePath: input1.c
-CHECK-DAG: OutputFile: output1.c.o
-CHECK-DAG: WorkingDir: /fake/working/dir
-CHECK-DAG: SysrootPath: {{/.*}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk
-CHECK-DAG: DependencyFilePath: input1.c
 
-CHECK-DAG: Remapping Index Store at: 'input2' to 'output'
-CHECK-DAG: Remapping file input2/v5/units/input2.c.o-
-CHECK-DAG: MainFilePath: input2.c
-CHECK-DAG: OutputFile: output2.c.o
-CHECK-DAG: WorkingDir: /fake/working/dir
-CHECK-DAG: SysrootPath: {{/.*}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk
-CHECK-DAG: DependencyFilePath: input2.c
+CHECK: ---
+CHECK: # output/v5/units/output1.c.o-{{.+}}
+CHECK: WorkingDirectory: /fake/working/dir
+CHECK: MainFilePath: 
+CHECK: OutputFile: output1.c.o
+CHECK: ModuleName: 
+CHECK: IsSystemUnit: 0
+CHECK: IsModuleUnit: 0
+CHECK: IsDebugCompilation: 1
+CHECK: CompilationTarget: x86_64-apple-macosx10.{{.+}}
+CHECK: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk
+CHECK: ProviderIdentifier: clang
+CHECK: ProviderVersion: {{.+}}
+CHECK: Dependencies:
+CHECK: 	DependencyKind: Record
+CHECK: 	IsSystem: 0
+CHECK: 	UnitOrRecordName: input1.c-25D1KZY099GN2
+CHECK: 	FilePath: input1.c
+CHECK: 	ModuleName: 
+CHECK: ---
+CHECK: # output/v5/units/output2.c.o-{{.+}}
+CHECK: WorkingDirectory: /fake/working/dir
+CHECK: MainFilePath: 
+CHECK: OutputFile: output2.c.o
+CHECK: ModuleName: 
+CHECK: IsSystemUnit: 0
+CHECK: IsModuleUnit: 0
+CHECK: IsDebugCompilation: 1
+CHECK: CompilationTarget: x86_64-apple-macosx10.{{.+}}
+CHECK: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk
+CHECK: ProviderIdentifier: clang
+CHECK: ProviderVersion: {{.+}}
+CHECK: Dependencies:
+CHECK: 	DependencyKind: Record
+CHECK: 	IsSystem: 0
+CHECK: 	UnitOrRecordName: input2.c-1F2N5TQ6O2TRL
+CHECK: 	FilePath: input2.c
+CHECK: 	ModuleName: 
