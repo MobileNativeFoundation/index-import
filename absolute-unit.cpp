@@ -53,11 +53,11 @@ int main(int argc, char **argv) {
         needsHeader = false;
       }
 
-      outs() << "\tDependencyKind: " << _dependencyKindName(info.Kind) << "\n"
-             << "\tIsSystem: " << info.IsSystem << "\n"
-             << "\tUnitOrRecordName: " << info.UnitOrRecordName << "\n"
-             << "\tFilePath: " << info.FilePath << "\n"
-             << "\tModuleName: " << info.ModuleName << "\n";
+      outs() << "\t- DependencyKind: " << _dependencyKindName(info.Kind) << "\n"
+             << "\t  IsSystem: " << info.IsSystem << "\n"
+             << "\t  UnitOrRecordName: " << info.UnitOrRecordName << "\n"
+             << "\t  FilePath: " << info.FilePath << "\n"
+             << "\t  ModuleName: " << info.ModuleName << "\n";
       return true;
     });
 
@@ -68,9 +68,9 @@ int main(int argc, char **argv) {
         needsHeader = false;
       }
 
-      outs() << "\tSourcePath: " << info.SourcePath << "\n"
-             << "\tSourceLine: " << info.SourceLine << "\n"
-             << "\tTargetPath: " << info.TargetPath << "\n";
+      outs() << "\t- SourcePath: " << info.SourcePath << "\n"
+             << "\t  SourceLine: " << info.SourceLine << "\n"
+             << "\t  TargetPath: " << info.TargetPath << "\n";
       return true;
     });
   }
