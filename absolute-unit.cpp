@@ -18,6 +18,8 @@ static const char *_dependencyKindName(IndexUnitReader::DependencyKind kind) {
   }
 }
 
+#define INDENT "    "
+
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
@@ -53,11 +55,11 @@ int main(int argc, char **argv) {
         needsHeader = false;
       }
 
-      outs() << "\tDependencyKind: " << _dependencyKindName(info.Kind) << "\n"
-             << "\tIsSystem: " << info.IsSystem << "\n"
-             << "\tUnitOrRecordName: " << info.UnitOrRecordName << "\n"
-             << "\tFilePath: " << info.FilePath << "\n"
-             << "\tModuleName: " << info.ModuleName << "\n";
+      outs() << INDENT "- DependencyKind: " << _dependencyKindName(info.Kind) << "\n"
+             << INDENT "  IsSystem: " << info.IsSystem << "\n"
+             << INDENT "  UnitOrRecordName: " << info.UnitOrRecordName << "\n"
+             << INDENT "  FilePath: " << info.FilePath << "\n"
+             << INDENT "  ModuleName: " << info.ModuleName << "\n";
       return true;
     });
 
@@ -68,9 +70,9 @@ int main(int argc, char **argv) {
         needsHeader = false;
       }
 
-      outs() << "\tSourcePath: " << info.SourcePath << "\n"
-             << "\tSourceLine: " << info.SourceLine << "\n"
-             << "\tTargetPath: " << info.TargetPath << "\n";
+      outs() << INDENT "- SourcePath: " << info.SourcePath << "\n"
+             << INDENT "  SourceLine: " << info.SourceLine << "\n"
+             << INDENT "  TargetPath: " << info.TargetPath << "\n";
       return true;
     });
   }
