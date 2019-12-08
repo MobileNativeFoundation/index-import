@@ -92,6 +92,17 @@ private:
   std::set<StringRef> _moduleNames;
 };
 
+// Returns a usable FileEntry, even when the path is empty or invalid.
+static const FileEntry *getFileEntry(FileManager &fileMgr, StringRef path) {
+  if (not path.empty()) {
+    // Default to getVirtualFile to handle both valid and invalid paths.
+    return fileMgr.getVirtualFile(path, /*size*/ 0, /*modtime*/ 0);
+  } else {
+    // getVirtualFile asserts and fails when called with the empty string.
+    return fileMgr.getFile(path);
+  }
+}
+
 static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
                                  const Remapper &remapper, FileManager &fileMgr,
                                  ModuleNameScope &moduleNames) {
@@ -107,7 +118,7 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
   auto writer = IndexUnitWriter(
       fileMgr, OutputIndexPath, reader->getProviderIdentifier(),
       reader->getProviderVersion(), outputFile, reader->getModuleName(),
-      fileMgr.getFile(mainFilePath), reader->isSystemUnit(),
+      getFileEntry(fileMgr, mainFilePath), reader->isSystemUnit(),
       reader->isModuleUnit(), reader->isDebugCompilation(), reader->getTarget(),
       sysrootPath, moduleNames.getModuleInfo);
 
@@ -117,14 +128,7 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
     const auto isSystem = info.IsSystem;
 
     const auto filePath = remapper.remap(info.FilePath);
-    auto file = fileMgr.getFile(filePath);
-    // The unit may reference a file that does not exist, for example if a build
-    // was cleaned. This can cause assertions, or lead to missing file paths in
-    // the unit file. When a file does not exist, fall back to getVirtualFile(),
-    // which accepts missing files.
-    if (not file) {
-      file = fileMgr.getVirtualFile(filePath, /*size*/ 0, /*mod time*/ 0);
-    }
+    const auto file = getFileEntry(fileMgr, filePath);
 
     switch (info.Kind) {
     case IndexUnitReader::DependencyKind::Unit: {
@@ -156,8 +160,8 @@ static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
     const auto targetPath = remapper.remap(info.TargetPath);
 
     // Note this isn't relevant to Swift.
-    writer.addInclude(fileMgr.getFile(sourcePath), info.SourceLine,
-                      fileMgr.getFile(targetPath));
+    writer.addInclude(getFileEntry(fileMgr, sourcePath), info.SourceLine,
+                      getFileEntry(fileMgr, targetPath));
     return true;
   });
 
