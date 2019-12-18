@@ -67,6 +67,7 @@ int main(int argc, char **argv) {
 
     reader->foreachDependency([&](const IndexUnitReader::DependencyInfo &info) {
       if (not fs::exists(info.FilePath)) {
+        exitStatus = EXIT_FAILURE;
         outs() << unitName << ": DependencyPath: " << info.FilePath << "\n";
       }
       return true;
