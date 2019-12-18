@@ -3,8 +3,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 
-#include <utility>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -45,7 +45,10 @@ int main(int argc, char **argv) {
     const std::vector<std::pair<std::string, std::string>> unitPaths = {
         {"WorkingDirectory", reader->getWorkingDirectory()},
         {"MainFilePath", reader->getMainFilePath()},
-        {"OutputFile", reader->getOutputFile()},
+        // TODO: OutputFile does not need to exist, but its path needs to match
+        // the format expected by Xcode. Check the format instead of the
+        // existence of the file.
+        // {"OutputFile", reader->getOutputFile()},
         {"SysrootPath", reader->getSysrootPath()},
     };
 
