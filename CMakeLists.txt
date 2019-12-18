@@ -14,9 +14,12 @@ function(add_index_executable execname)
   if(NOT LLVM_ENABLE_RTTI)
     target_compile_options("${execname}" PRIVATE -fno-rtti)
   endif()
-  target_link_libraries("${execname}" PRIVATE clangIndex)
+  target_link_libraries("${execname}" PRIVATE clangIndex clangIndexDataStore)
   target_link_options("${execname}" PRIVATE -dead_strip)
 endfunction()
 
 add_index_executable(index-import)
 add_index_executable(absolute-unit)
+add_index_executable(validate-index)
+# clangIndexDataStore depends on clangDirectoryWatcher which depends on CoreServices
+target_link_options(validate-index PRIVATE -framework CoreServices)
