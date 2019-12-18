@@ -72,6 +72,20 @@ int main(int argc, char **argv) {
       }
       return true;
     });
+
+    reader->foreachInclude([&](const IndexUnitReader::IncludeInfo &info) {
+      if (not fs::exists(info.SourcePath)) {
+        exitStatus = EXIT_FAILURE;
+        outs() << unitName << ": IncludeSourcePath: " << info.SourcePath
+               << "\n";
+      }
+      if (not fs::exists(info.TargetPath)) {
+        exitStatus = EXIT_FAILURE;
+        outs() << unitName << ": IncludeTargetPath: " << info.TargetPath
+               << "\n";
+      }
+      return true;
+    });
   }
 
   return exitStatus;
