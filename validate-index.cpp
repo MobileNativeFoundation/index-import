@@ -43,13 +43,13 @@ int main(int argc, char **argv) {
     }
 
     const std::vector<std::pair<std::string, std::string>> unitPaths = {
-        {"WorkingDirectory", reader->getWorkingDirectory()},
         {"MainFilePath", reader->getMainFilePath()},
+        {"SysrootPath", reader->getSysrootPath()},
+        {"WorkingDirectory", reader->getWorkingDirectory()},
         // TODO: OutputFile does not need to exist, but its path needs to match
         // the format expected by Xcode. Check the format instead of the
         // existence of the file.
         // {"OutputFile", reader->getOutputFile()},
-        {"SysrootPath", reader->getSysrootPath()},
     };
 
     for (const auto &pair : unitPaths) {
