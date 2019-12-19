@@ -14,6 +14,12 @@ using namespace clang::index;
 static cl::opt<std::string> IndexStore(cl::Positional, cl::Required,
                                        cl::desc("<indexstore>"));
 
+// Helper function to use consistent output. Uses `stdout` to ensure the output
+// is greppable, or redirectable to file (separate tool errors).
+static void logMissingFile(StringRef unitName, StringRef key, StringRef path) {
+  outs() << unitName << ": " << key << ": " << path << "\n";
+}
+
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
@@ -61,14 +67,14 @@ int main(int argc, char **argv) {
 
       if (not fs::exists(path)) {
         exitStatus = EXIT_FAILURE;
-        outs() << unitName << ": " << key << ": " << path << "\n";
+        logMissingFile(unitName, key, path);
       }
     }
 
     reader->foreachDependency([&](const IndexUnitReader::DependencyInfo &info) {
       if (not fs::exists(info.FilePath)) {
         exitStatus = EXIT_FAILURE;
-        outs() << unitName << ": DependencyPath: " << info.FilePath << "\n";
+        logMissingFile(unitName, "DependencyPath", info.FilePath);
       }
       return true;
     });
@@ -76,13 +82,11 @@ int main(int argc, char **argv) {
     reader->foreachInclude([&](const IndexUnitReader::IncludeInfo &info) {
       if (not fs::exists(info.SourcePath)) {
         exitStatus = EXIT_FAILURE;
-        outs() << unitName << ": IncludeSourcePath: " << info.SourcePath
-               << "\n";
+        logMissingFile(unitName, "IncludeSourcePath", info.SourcePath);
       }
       if (not fs::exists(info.TargetPath)) {
         exitStatus = EXIT_FAILURE;
-        outs() << unitName << ": IncludeTargetPath: " << info.TargetPath
-               << "\n";
+        logMissingFile(unitName, "IncludeTargetPath", info.TargetPath);
       }
       return true;
     });
