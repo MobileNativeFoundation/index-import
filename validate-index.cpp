@@ -15,7 +15,7 @@ static cl::opt<std::string> IndexStore(cl::Positional, cl::Required,
                                        cl::desc("<indexstore>"));
 
 // Helper function to use consistent output. Uses `stdout` to ensure the output
-// is greppable, or redirectable to file (separate tool errors).
+// is greppable, or redirectable to file (separate from API/system errors).
 static void logMissingFile(StringRef unitName, StringRef key, StringRef path) {
   outs() << unitName << ": " << key << ": " << path << "\n";
 }
