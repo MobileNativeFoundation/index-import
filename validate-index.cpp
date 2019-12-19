@@ -43,9 +43,10 @@ int main(int argc, char **argv) {
     auto reader = IndexUnitReader::createWithUnitFilename(unitName, IndexStore,
                                                           readerError);
     if (not reader) {
+      exitStatus = EXIT_FAILURE;
       errs() << "error: failed to read unit file " << unitName << " -- "
              << readerError << "\n";
-      return EXIT_FAILURE;
+      continue;
     }
 
     const std::vector<std::pair<std::string, std::string>> unitPaths = {
