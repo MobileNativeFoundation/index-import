@@ -49,13 +49,24 @@ A more complex example is importing an index from a [Bazel](https://bazel.build)
 ```sh
 #!/bin/bash
 
-bazel_root="^/private/var/tmp/_bazel_[^/]+/[^/]+/execroot/[^/]+"
-bazel_module_dir="bazel-out/[^/]+/bin/Modules/([^/]+)"
-xcode_module_dir="$CONFIGURATION_TEMP_DIR/\$1.build/Objects-normal/$ARCHS"
+# ex: /private/var/tmp/_bazel_<username>/<hash>/execroot/<workspacename>
+bazel_root="^/private/var/tmp/_bazel_.+?/.+?/execroot/[^/]+"
+# ex: bazel-out/ios-x86_64-min11.0-applebin_ios-ios_x86_64-dbg/bin
+bazel_bin="^(?:$bazel_root/)?bazel-out/.+?/bin"
+
+# ex: $bazel_bin/<package>/<target>_objs/<source>.swift.o
+bazel_swift_object="$bazel_bin/.*/(.+?)_objs/.*/(.+?)\\.swift\\.o$"
+# ex: Build/Intermediates.noindex/<project>.build/Debug-iphonesimulator/<target>.build/Objects-normal/x86_64/<source>.o
+xcode_object="$CONFIGURATION_TEMP_DIR/\$1.build/Objects-normal/$ARCHS/\$2.o"
+
+# ex: $bazel_bin/<package>/<module>.swiftmodule
+readonly bazel_module="$bazel_bin/.*/(.+?)\\.swiftmodule$"
+# ex: Build/Products/Debug-iphonesimulator/<module>.swiftmodule/x86_64.swiftmodule
+readonly xcode_module="$BUILT_PRODUCTS_DIR/\$1.swiftmodule/$ARCHS.swiftmodule"
 
 index-import \
-    -remap "$bazel_root/$bazel_module_dir/\\1.swiftmodule=$xcode_module_dir/\$1.swiftmodule" \
-    -remap "^$bazel_module_dir/.+/([^/]+).swift.o=$xcode_module_dir/\$2.o" \
+    -remap "$bazel_module=$xcode_module" \
+    -remap "$bazel_swift_object=$xcode_object" \
     -remap "$bazel_root=$SRCROOT" \
     path/to/input/index \
     path/to/xcode/index
