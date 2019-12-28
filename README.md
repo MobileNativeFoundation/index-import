@@ -68,8 +68,8 @@ index-import \
     -remap "$bazel_module=$xcode_module" \
     -remap "$bazel_swift_object=$xcode_object" \
     -remap "$bazel_root=$SRCROOT" \
-    path/to/input/index \
-    path/to/xcode/index
+    "$SRCROOT/bazel-out/<config>/bin/<package>/<module>.indexstore" \
+    "$HOME/Library/Developer/Xcode/DerivedData/<project>/Index/DataStore"
 
 ```
 
