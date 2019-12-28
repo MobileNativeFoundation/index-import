@@ -60,9 +60,9 @@ bazel_swift_object="$bazel_bin/.*/(.+?)_objs/.*/(.+?)\\.swift\\.o$"
 xcode_object="$CONFIGURATION_TEMP_DIR/\$1.build/Objects-normal/$ARCHS/\$2.o"
 
 # ex: $bazel_bin/<package>/<module>.swiftmodule
-readonly bazel_module="$bazel_bin/.*/(.+?)\\.swiftmodule$"
+bazel_module="$bazel_bin/.*/(.+?)\\.swiftmodule$"
 # ex: Build/Products/Debug-iphonesimulator/<module>.swiftmodule/x86_64.swiftmodule
-readonly xcode_module="$BUILT_PRODUCTS_DIR/\$1.swiftmodule/$ARCHS.swiftmodule"
+xcode_module="$BUILT_PRODUCTS_DIR/\$1.swiftmodule/$ARCHS.swiftmodule"
 
 index-import \
     -remap "$bazel_module=$xcode_module" \
