@@ -1,8 +1,43 @@
-CHECK: Remapping Index Store at: 'input' to 'output'
-CHECK: Remapping file input/v5/units/input.o-WJTHFC1KVBQ8
-CHECK: MainFilePath: /fake/working/dir/input.swift
+CHECK: ---
+CHECK: # output/v5/units/output.o-{{.+}}
+CHECK: WorkingDirectory: /fake/working/dir
+CHECK: MainFilePath: 
 CHECK: OutputFile: output.o
-CHECK: WorkingDir: /fake/working/dir
-CHECK: SysrootPath: {{/.*}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.{{[0-9]+}}.sdk
-CHECK: DependencyFilePath: {{/.*}}/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/x86_64/Swift.swiftmodule
-
+CHECK: ModuleName: input
+CHECK: IsSystemUnit: 0
+CHECK: IsModuleUnit: 0
+CHECK: IsDebugCompilation: 1
+CHECK: CompilationTarget: x86_64-apple-macosx10.{{.+}}
+CHECK: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.*}}.sdk
+CHECK: ProviderIdentifier: swift
+CHECK: ProviderVersion: 
+CHECK: Dependencies:
+CHECK: 	DependencyKind: Unit
+CHECK: 	IsSystem: 1
+CHECK: 	UnitOrRecordName: x86_64-apple-macos.swiftmodule-{{.+}}
+CHECK: 	FilePath: {{.+}}/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/prebuilt-modules/Swift.swiftmodule/x86_64-apple-macos.swiftmodule
+CHECK: 	ModuleName: Swift
+CHECK: 	DependencyKind: Record
+CHECK: 	IsSystem: 0
+CHECK: 	UnitOrRecordName: input.swift-{{.+}}
+CHECK: 	FilePath: /fake/working/dir/input.swift
+CHECK: 	ModuleName: 
+CHECK: ---
+CHECK: # output/v5/units/x86_64-apple-macos.swiftmodule-{{.+}}
+CHECK: WorkingDirectory: /fake/working/dir
+CHECK: MainFilePath: 
+CHECK: OutputFile: {{.+}}/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/prebuilt-modules/Swift.swiftmodule/x86_64-apple-macos.swiftmodule
+CHECK: ModuleName: Swift
+CHECK: IsSystemUnit: 1
+CHECK: IsModuleUnit: 1
+CHECK: IsDebugCompilation: 1
+CHECK: CompilationTarget: x86_64-apple-macosx10.{{.+}}
+CHECK: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk
+CHECK: ProviderIdentifier: swift
+CHECK: ProviderVersion: 
+CHECK: Dependencies:
+CHECK: 	DependencyKind: Record
+CHECK: 	IsSystem: 1
+CHECK: 	UnitOrRecordName: x86_64-apple-macos.swiftmodule-{{.+}}
+CHECK: 	FilePath: {{.+}}/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/prebuilt-modules/Swift.swiftmodule/x86_64-apple-macos.swiftmodule
+CHECK: 	ModuleName: Swift

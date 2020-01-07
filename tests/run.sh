@@ -4,6 +4,10 @@ set -euo pipefail
 
 readonly base_dir=$(dirname "$0")
 
+clang() {
+    xcrun --sdk macosx clang "$@"
+}
+
 ############################################################
 
 echo "Testing clang indexes"
@@ -13,14 +17,15 @@ pushd "$base_dir"/clang >/dev/null
 rm -fr input output
 
 # Produce the index.
-xcrun clang -fsyntax-only -index-store-path input input.c
+clang -fsyntax-only -index-store-path input input.c
 
-# Test index-import by matching its verbose output.
-# See https://llvm.org/docs/CommandGuide/FileCheck.html
-../../build/index-import -V \
+../../build/index-import \
   -remap input.c.o=output.c.o \
   -remap "$(pwd)"=/fake/working/dir \
-  input output \
+  input output
+
+# See https://llvm.org/docs/CommandGuide/FileCheck.html
+../../build/absolute-unit output/v5/units/* \
   | FileCheck expected.txt
 
 # Check that the expected index files exist.
@@ -44,12 +49,13 @@ rm -fr input output
 # Produce the index and delete the unneeded .o.
 xcrun swiftc -index-store-path input -c input.swift && rm input.o
 
-# Test index-import by matching its verbose output.
-# See https://llvm.org/docs/CommandGuide/FileCheck.html
-../../build/index-import -V \
+../../build/index-import \
   -remap input.o=output.o \
   -remap "$(pwd)"=/fake/working/dir \
-  input output \
+  input output
+
+# See https://llvm.org/docs/CommandGuide/FileCheck.html
+../../build/absolute-unit output/v5/units/* \
   | FileCheck expected.txt
 
 # Check that the expected index files exist.
@@ -71,16 +77,17 @@ pushd "$base_dir"/multiple >/dev/null
 rm -fr input1 input2 output
 
 # Produce the two indexes.
-xcrun clang -fsyntax-only -index-store-path input1 input1.c
-xcrun clang -fsyntax-only -index-store-path input2 input2.c
+clang -fsyntax-only -index-store-path input1 input1.c
+clang -fsyntax-only -index-store-path input2 input2.c
 
-# Test index-import by matching its verbose output.
-# See https://llvm.org/docs/CommandGuide/FileCheck.html
-../../build/index-import -V \
+../../build/index-import \
   -parallel-stride 1 \
   -remap 'input(.).c.o=output$1.c.o' \
   -remap "$(pwd)"=/fake/working/dir \
-  input1 input2 output \
+  input1 input2 output
+
+# See https://llvm.org/docs/CommandGuide/FileCheck.html
+../../build/absolute-unit output/v5/units/* \
   | FileCheck expected.txt
 
 # Check that the expected index files exist.

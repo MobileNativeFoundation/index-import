@@ -1,7 +1,19 @@
-CHECK: Remapping Index Store at: 'input' to 'output'
-CHECK: Remapping file input/v5/units/input.c.o-7GYKMSFATPVS
-CHECK: MainFilePath: input.c
+CHECK: ---
+CHECK: # output/v5/units/output.c.o-{{.+}}
+CHECK: WorkingDirectory: /fake/working/dir
+CHECK: MainFilePath: 
 CHECK: OutputFile: output.c.o
-CHECK: WorkingDir: /fake/working/dir
-CHECK: SysrootPath: {{/.*}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.{{[0-9]+}}.sdk
-CHECK: DependencyFilePath: input.c
+CHECK: ModuleName: 
+CHECK: IsSystemUnit: 0
+CHECK: IsModuleUnit: 0
+CHECK: IsDebugCompilation: 1
+CHECK: CompilationTarget: x86_64-apple-macosx10.{{.+}}
+CHECK: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.*}}.sdk
+CHECK: ProviderIdentifier: clang
+CHECK: ProviderVersion: {{.+}}
+CHECK: Dependencies:
+CHECK: 	DependencyKind: Record
+CHECK: 	IsSystem: 0
+CHECK: 	UnitOrRecordName: input.c-1GAVGMEKRGFCS
+CHECK: 	FilePath: input.c
+CHECK: 	ModuleName: 

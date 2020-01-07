@@ -7,10 +7,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdlib>
-#include <iostream>
 #include <regex>
 #include <set>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -34,10 +32,6 @@ static cl::list<std::string> InputIndexPaths(cl::Positional, cl::OneOrMore,
 
 static cl::opt<std::string> OutputIndexPath(cl::Positional, cl::Required,
                                             cl::desc("<output-indexstore>"));
-
-static cl::opt<bool> Verbose("verbose",
-                             cl::desc("Print path remapping results"));
-static cl::alias VerboseAlias("V", cl::aliasopt(Verbose));
 
 static cl::opt<unsigned> ParallelStride(
     "parallel-stride", cl::init(32),
@@ -98,6 +92,17 @@ private:
   std::set<StringRef> _moduleNames;
 };
 
+// Returns a usable FileEntry, even when the path is empty or invalid.
+static const FileEntry *getFileEntry(FileManager &fileMgr, StringRef path) {
+  if (not path.empty()) {
+    // Default to getVirtualFile to handle both valid and invalid paths.
+    return fileMgr.getVirtualFile(path, /*size*/ 0, /*modtime*/ 0);
+  } else {
+    // getVirtualFile asserts and fails when called with the empty string.
+    return fileMgr.getFile(path);
+  }
+}
+
 // Returns true if the Unit file of given output file already exists and is
 // older than the input file.
 static bool isUnitUpToDate(StringRef outputFile, StringRef inputFile,
@@ -118,19 +123,12 @@ static Optional<IndexUnitWriter>
 remapUnit(StringRef inputUnitPath,
           const std::unique_ptr<IndexUnitReader> &reader,
           const Remapper &remapper, FileManager &fileMgr,
-          ModuleNameScope &moduleNames, std::ostream *outs) {
+          ModuleNameScope &moduleNames) {
   // The set of remapped paths.
   auto workingDir = remapper.remap(reader->getWorkingDirectory());
   auto outputFile = remapper.remap(reader->getOutputFile());
   auto mainFilePath = remapper.remap(reader->getMainFilePath());
   auto sysrootPath = remapper.remap(reader->getSysrootPath());
-
-  if (Verbose) {
-    *outs << "MainFilePath: " << mainFilePath << "\n"
-          << "OutputFile: " << outputFile << "\n"
-          << "WorkingDir: " << workingDir << "\n"
-          << "SysrootPath: " << sysrootPath << "\n";
-  }
 
   auto &fsOpts = fileMgr.getFileSystemOpts();
   fsOpts.WorkingDir = workingDir;
@@ -138,7 +136,7 @@ remapUnit(StringRef inputUnitPath,
   auto writer = IndexUnitWriter(
       fileMgr, OutputIndexPath, reader->getProviderIdentifier(),
       reader->getProviderVersion(), outputFile, reader->getModuleName(),
-      fileMgr.getFile(mainFilePath), reader->isSystemUnit(),
+      getFileEntry(fileMgr, mainFilePath), reader->isSystemUnit(),
       reader->isModuleUnit(), reader->isDebugCompilation(), reader->getTarget(),
       sysrootPath, moduleNames.getModuleInfo);
 
@@ -160,18 +158,7 @@ remapUnit(StringRef inputUnitPath,
     const auto isSystem = info.IsSystem;
 
     const auto filePath = remapper.remap(info.FilePath);
-    auto file = fileMgr.getFile(filePath);
-    // The unit may reference a file that does not exist, for example if a build
-    // was cleaned. This can cause assertions, or lead to missing file paths in
-    // the unit file. When a file does not exist, fall back to getVirtualFile(),
-    // which accepts missing files.
-    if (not file) {
-      file = fileMgr.getVirtualFile(filePath, /*size*/ 0, /*mod time*/ 0);
-    }
-
-    if (Verbose) {
-      *outs << "DependencyFilePath: " << filePath << "\n";
-    }
+    const auto file = getFileEntry(fileMgr, filePath);
 
     switch (info.Kind) {
     case IndexUnitReader::DependencyKind::Unit: {
@@ -183,9 +170,6 @@ remapUnit(StringRef inputUnitPath,
       SmallString<128> unitName;
       if (name != "") {
         writer.getUnitNameForOutputFile(filePath, unitName);
-        if (Verbose) {
-          *outs << "DependencyUnitName: " << unitName.c_str() << "\n";
-        }
       }
 
       writer.addUnitDependency(unitName, file, isSystem, moduleNameRef);
@@ -202,9 +186,12 @@ remapUnit(StringRef inputUnitPath,
   });
 
   reader->foreachInclude([&](const IndexUnitReader::IncludeInfo &info) {
-    // Note this isn't revelevnt to Swift.
-    writer.addInclude(fileMgr.getFile(info.SourcePath), info.SourceLine,
-                      fileMgr.getFile(info.TargetPath));
+    const auto sourcePath = remapper.remap(info.SourcePath);
+    const auto targetPath = remapper.remap(info.TargetPath);
+
+    // Note this isn't relevant to Swift.
+    writer.addInclude(getFileEntry(fileMgr, sourcePath), info.SourceLine,
+                      getFileEntry(fileMgr, targetPath));
     return true;
   });
 
@@ -286,12 +273,7 @@ static std::string normalizePath(StringRef Path) {
 
 static bool remapIndex(const Remapper &remapper,
                        const std::string &InputIndexPath,
-                       const std::string &outputIndexPath, std::ostream *outs) {
-  if (Verbose) {
-    *outs << "Remapping Index Store at: '" << InputIndexPath << "' to '"
-          << OutputIndexPath << "'\n";
-  }
-
+                       const std::string &outputIndexPath) {
   SmallString<256> unitDirectory;
   path::append(unitDirectory, InputIndexPath, "v5", "units");
   SmallString<256> recordsDirectory;
@@ -331,13 +313,10 @@ static bool remapIndex(const Remapper &remapper,
       success = false;
       continue;
     }
-    if (Verbose) {
-      *outs << "Remapping file " << unitPath << "\n";
-    }
 
     ModuleNameScope moduleNames;
-    auto writer =
-        remapUnit(unitPath, reader, remapper, fileMgr, moduleNames, outs);
+    auto writer = remapUnit(unitPath, reader, remapper, fileMgr, moduleNames);
+
     if (writer.hasValue()) {
       std::string unitWriteError;
       if (writer->write(unitWriteError)) {
@@ -398,9 +377,7 @@ int main(int argc, char **argv) {
     bool success = true;
     for (auto &InputIndexPath : InputIndexPaths) {
       InputIndexPath = normalizePath(InputIndexPath);
-
-      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath,
-                         &std::cout)) {
+      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath)) {
         success = false;
       }
     }
@@ -412,27 +389,17 @@ int main(int argc, char **argv) {
   const size_t length = InputIndexPaths.size();
   const size_t numStrides = ((length - 1) / stride) + 1;
 
-  auto lock = dispatch_semaphore_create(1);
   __block bool success = true;
   dispatch_apply(numStrides, DISPATCH_APPLY_AUTO, ^(size_t strideIndex) {
     const size_t start = strideIndex * stride;
     const size_t end = std::min(start + stride, length);
     for (size_t index = start; index < end; ++index) {
       std::string InputIndexPath = normalizePath(InputIndexPaths[index]);
-
-      std::ostringstream outs{};
-      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath, &outs)) {
+      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath)) {
         success = false;
-      }
-
-      if (Verbose) {
-        dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
-        std::cout << outs.str();
-        dispatch_semaphore_signal(lock);
       }
     }
   });
-  dispatch_release(lock);
 
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
