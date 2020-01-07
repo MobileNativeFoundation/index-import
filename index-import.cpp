@@ -100,26 +100,25 @@ private:
 
 // Returns true if the Unit file of given output file already exists and is
 // older than the input file.
-static bool isUnitUpToDate(StringRef outputFile,
-                           StringRef inputFile,
+static bool isUnitUpToDate(StringRef outputFile, StringRef inputFile,
                            IndexUnitWriter &writer) {
   std::string error;
-  auto IsUptodateOpt = writer.isUnitUpToDateForOutputFile(outputFile, inputFile, error);
-  if (!IsUptodateOpt.hasValue()) {
-    errs() << "error: failed file status check:\n"
-      << error << "\n";
+  auto isUptodateOpt =
+      writer.isUnitUpToDateForOutputFile(outputFile, inputFile, error);
+  if (!isUptodateOpt.hasValue()) {
+    errs() << "error: failed file status check:\n" << error << "\n";
     return false;
   }
-  
-  return *IsUptodateOpt;
+
+  return *isUptodateOpt;
 }
 
 // Returns None if the Unit file is already up to date
-static Optional<IndexUnitWriter> remapUnit(StringRef inputUnitPath,
-                                           const std::unique_ptr<IndexUnitReader> &reader,
-                                           const Remapper &remapper, FileManager &fileMgr,
-                                           ModuleNameScope &moduleNames,
-                                           std::ostream *outs) {
+static Optional<IndexUnitWriter>
+remapUnit(StringRef inputUnitPath,
+          const std::unique_ptr<IndexUnitReader> &reader,
+          const Remapper &remapper, FileManager &fileMgr,
+          ModuleNameScope &moduleNames, std::ostream *outs) {
   // The set of remapped paths.
   auto workingDir = remapper.remap(reader->getWorkingDirectory());
   auto outputFile = remapper.remap(reader->getOutputFile());
@@ -142,11 +141,16 @@ static Optional<IndexUnitWriter> remapUnit(StringRef inputUnitPath,
       fileMgr.getFile(mainFilePath), reader->isSystemUnit(),
       reader->isModuleUnit(), reader->isDebugCompilation(), reader->getTarget(),
       sysrootPath, moduleNames.getModuleInfo);
-  
+
   // Check if the unit file is already up to date
-  SmallString<256> outputFileFullPath;
-  path::append(outputFileFullPath, workingDir, outputFile);
-  if (isUnitUpToDate(outputFileFullPath, inputUnitPath, writer)) {
+  SmallString<256> remappedOutputFilePath;
+  if (outputFile[0] != '/') {
+    // Convert outputFile to absolute path
+    path::append(remappedOutputFilePath, workingDir, outputFile);
+  } else {
+    remappedOutputFilePath = outputFile;
+  }
+  if (isUnitUpToDate(remappedOutputFilePath, inputUnitPath, writer)) {
     return None;
   }
 
@@ -332,12 +336,13 @@ static bool remapIndex(const Remapper &remapper,
     }
 
     ModuleNameScope moduleNames;
-    auto writer = remapUnit(unitPath, reader, remapper, fileMgr, moduleNames, outs);
+    auto writer =
+        remapUnit(unitPath, reader, remapper, fileMgr, moduleNames, outs);
     if (writer.hasValue()) {
       std::string unitWriteError;
       if (writer->write(unitWriteError)) {
         errs() << "error: failed to write index store; " << unitWriteError
-        << "\n";
+               << "\n";
         success = false;
       }
     }
