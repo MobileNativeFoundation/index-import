@@ -103,14 +103,14 @@ private:
 static bool isUnitUpToDate(StringRef outputFile, StringRef inputFile,
                            IndexUnitWriter &writer) {
   std::string error;
-  auto isUptodateOpt =
+  auto isUpToDateOpt =
       writer.isUnitUpToDateForOutputFile(outputFile, inputFile, error);
-  if (!isUptodateOpt.hasValue()) {
+  if (!isUpToDateOpt.hasValue()) {
     errs() << "error: failed file status check:\n" << error << "\n";
     return false;
   }
 
-  return *isUptodateOpt;
+  return *isUpToDateOpt;
 }
 
 // Returns None if the Unit file is already up to date
