@@ -1,7 +1,9 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Index/IndexUnitReader.h"
 #include "clang/Index/IndexUnitWriter.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -37,6 +39,10 @@ static cl::opt<unsigned> ParallelStride(
     "parallel-stride", cl::init(32),
     cl::desc(
         "Stride for parallel operations. 0 to disable parallel processing"));
+
+static cl::opt<bool>
+    Incremental("incremental",
+                cl::desc("Only transfer units if they are newer"));
 
 struct Remapper {
 public:
@@ -102,12 +108,98 @@ static const FileEntry *getFileEntry(FileManager &fileMgr, StringRef path) {
   return fileMgr.getVirtualFile(path, /*size*/ 0, /*modtime*/ 0);
 }
 
-static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
-                                 const Remapper &remapper, FileManager &fileMgr,
-                                 ModuleNameScope &moduleNames) {
+void getUnitPathForOutputFile(StringRef unitsPath, StringRef filePath,
+                              SmallVectorImpl<char> &str,
+                              FileManager &fileMgr) {
+  str.append(unitsPath.begin(), unitsPath.end());
+  str.push_back('/');
+  SmallString<256> absPath(filePath);
+  fileMgr.makeAbsolutePath(absPath);
+  StringRef fname = sys::path::filename(absPath);
+  str.append(fname.begin(), fname.end());
+  str.push_back('-');
+  llvm::hash_code pathHashVal = llvm::hash_value(absPath);
+  llvm::APInt(64, pathHashVal).toString(str, 36, /*Signed=*/false);
+}
+
+Optional<bool>
+isUnitUpToDateForOutputFile(StringRef unitsPath, StringRef filePath,
+                            Optional<StringRef> timeCompareFilePath,
+                            FileManager &fileMgr, std::string &error) {
+  SmallString<256> unitPath;
+  getUnitPathForOutputFile(unitsPath, filePath, unitPath, fileMgr);
+
+  llvm::sys::fs::file_status unitStat;
+  if (std::error_code ec = llvm::sys::fs::status(unitPath.c_str(), unitStat)) {
+    if (ec != llvm::errc::no_such_file_or_directory) {
+      llvm::raw_string_ostream err(error);
+      err << "could not access path '" << unitPath << "': " << ec.message();
+      return None;
+    }
+    return false;
+  }
+
+  if (!timeCompareFilePath.hasValue())
+    return true;
+
+  llvm::sys::fs::file_status compareStat;
+  if (std::error_code ec =
+          llvm::sys::fs::status(*timeCompareFilePath, compareStat)) {
+    if (ec != llvm::errc::no_such_file_or_directory) {
+      llvm::raw_string_ostream err(error);
+      err << "could not access path '" << *timeCompareFilePath
+          << "': " << ec.message();
+      return None;
+    }
+    return true;
+  }
+
+  // Return true (unit is up-to-date) if the file to compare is older than the
+  // unit file.
+  return compareStat.getLastModificationTime() <=
+         unitStat.getLastModificationTime();
+}
+
+// Returns true if the Unit file of given output file already exists and is
+// older than the input file.
+static bool isUnitUpToDate(StringRef unitsPath, StringRef outputFile,
+                           StringRef inputFile, FileManager &fileMgr) {
+  std::string error;
+  auto isUpToDateOpt = isUnitUpToDateForOutputFile(unitsPath, outputFile,
+                                                   inputFile, fileMgr, error);
+  if (!isUpToDateOpt.hasValue()) {
+    errs() << "error: failed file status check:\n" << error << "\n";
+    return false;
+  }
+
+  return *isUpToDateOpt;
+}
+
+// Returns None if the Unit file is already up to date
+static Optional<IndexUnitWriter>
+remapUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
+          const std::unique_ptr<IndexUnitReader> &reader,
+          const Remapper &remapper, FileManager &fileMgr,
+          ModuleNameScope &moduleNames) {
   // The set of remapped paths.
   auto workingDir = remapper.remap(reader->getWorkingDirectory());
   auto outputFile = remapper.remap(reader->getOutputFile());
+
+  if (Incremental) {
+    // Check if the unit file is already up to date
+    SmallString<256> remappedOutputFilePath;
+    if (outputFile[0] != '/') {
+      // Convert outputFile to absolute path
+      path::append(remappedOutputFilePath, workingDir, outputFile);
+    } else {
+      remappedOutputFilePath = outputFile;
+    }
+    if (isUnitUpToDate(outputUnitsPath, remappedOutputFilePath, inputUnitPath,
+                       fileMgr)) {
+      return None;
+    }
+  }
+
   auto mainFilePath = remapper.remap(reader->getMainFilePath());
   auto sysrootPath = remapper.remap(reader->getSysrootPath());
 
@@ -247,6 +339,8 @@ static bool remapIndex(const Remapper &remapper,
   path::append(unitDirectory, InputIndexPath, "v5", "units");
   SmallString<256> recordsDirectory;
   path::append(recordsDirectory, InputIndexPath, "v5", "records");
+  SmallString<256> outputUnitDirectory;
+  path::append(outputUnitDirectory, OutputIndexPath, "v5", "units");
 
   if (not fs::is_directory(unitDirectory) ||
       not fs::is_directory(recordsDirectory)) {
@@ -284,13 +378,16 @@ static bool remapIndex(const Remapper &remapper,
     }
 
     ModuleNameScope moduleNames;
-    auto writer = remapUnit(reader, remapper, fileMgr, moduleNames);
+    auto writer = remapUnit(outputUnitDirectory, unitPath, reader, remapper,
+                            fileMgr, moduleNames);
 
-    std::string unitWriteError;
-    if (writer.write(unitWriteError)) {
-      errs() << "error: failed to write index store; " << unitWriteError
-             << "\n";
-      success = false;
+    if (writer.hasValue()) {
+      std::string unitWriteError;
+      if (writer->write(unitWriteError)) {
+        errs() << "error: failed to write index store; " << unitWriteError
+               << "\n";
+        success = false;
+      }
     }
   }
 
