@@ -9,6 +9,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdlib>
+#include <fstream>
 #include <regex>
 #include <set>
 #include <string>
@@ -29,7 +30,17 @@ static cl::list<std::string> PathRemaps("remap", cl::OneOrMore,
                                         cl::value_desc("regex=replacement"));
 static cl::alias PathRemapsAlias("r", cl::aliasopt(PathRemaps));
 
-static cl::list<std::string> InputIndexPaths(cl::Positional, cl::OneOrMore,
+static cl::opt<std::string> UnitPathsFile(
+    "unit-paths-file",
+    cl::desc("Path to a file containing paths to unit files. If specified "
+             "record-paths-file must also be specified"));
+
+static cl::opt<std::string> RecordPathsFile(
+    "record-paths-file",
+    cl::desc("Path to a file containing paths to record files. If specified "
+             "unit-paths-file must also be specified"));
+
+static cl::list<std::string> InputIndexPaths(cl::Positional, cl::ZeroOrMore,
                                              cl::desc("<input-indexstores>"));
 
 static cl::opt<std::string> OutputIndexPath(cl::Positional, cl::Required,
@@ -270,6 +281,17 @@ static bool cloneRecord(StringRef from, StringRef to) {
   return (failed == 0 || errno == EEXIST);
 }
 
+static bool createDirectories(StringRef path) {
+  std::error_code failed =
+      fs::create_directories(path, /*IgnoreExisting=*/true);
+  if (failed) {
+    errs() << "Could not create directory `" << path
+           << "`: " << failed.message() << "\n";
+    return false;
+  }
+  return true;
+}
+
 static bool cloneRecords(StringRef recordsDirectory,
                          const std::string &inputIndexPath,
                          const std::string &outputIndexPath) {
@@ -292,11 +314,8 @@ static bool cloneRecords(StringRef recordsDirectory,
     path::replace_path_prefix(outputPath, inputIndexPath, outputIndexPath);
 
     if (status->type() == fs::file_type::directory_file) {
-      std::error_code failed = fs::create_directory(outputPath);
-      if (failed && failed != std::errc::file_exists) {
+      if (not createDirectories(outputPath)) {
         success = false;
-        errs() << "Could not create directory `" << outputPath
-               << "`: " << failed.message() << "\n";
       }
     } else if (status->type() == fs::file_type::regular_file) {
       if (not cloneRecord(inputPath, outputPath)) {
@@ -311,6 +330,39 @@ static bool cloneRecords(StringRef recordsDirectory,
     success = false;
     errs() << "error: aborted while reading from records directory: "
            << dirError.message() << "\n";
+  }
+
+  return success;
+}
+
+static bool cloneRecords(const std::vector<std::string> &recordPaths,
+                         const std::string &outputIndexPath) {
+  bool success = true;
+
+  for (auto inputPath : recordPaths) {
+    auto inputIndexPath = path::parent_path(
+        path::parent_path(path::parent_path(path::parent_path(inputPath))));
+
+    SmallString<128> outputPath{inputPath};
+    path::replace_path_prefix(outputPath, inputIndexPath, outputIndexPath);
+
+    if (not cloneRecord(inputPath, outputPath)) {
+      bool innerSuccess = true;
+      if (errno == ENOENT) {
+        // We need to create the directories below it
+        if (not createDirectories(path::parent_path(outputPath))) {
+          innerSuccess = false;
+        } else if (not cloneRecord(inputPath, outputPath)) {
+          innerSuccess = false;
+        }
+      }
+
+      if (!innerSuccess) {
+        success = false;
+        errs() << "Could not copy record file from `" << inputPath << "` to `"
+               << outputPath << "`: " << strerror(errno) << "\n";
+      }
+    }
   }
 
   return success;
@@ -333,6 +385,8 @@ static bool remapIndex(const Remapper &remapper,
   path::append(unitDirectory, InputIndexPath, "v5", "units");
   SmallString<256> recordsDirectory;
   path::append(recordsDirectory, InputIndexPath, "v5", "records");
+  SmallString<256> outputUnitDirectory;
+  path::append(outputUnitDirectory, OutputIndexPath, "v5", "units");
 
   if (not fs::is_directory(unitDirectory) ||
       not fs::is_directory(recordsDirectory)) {
@@ -391,6 +445,79 @@ static bool remapIndex(const Remapper &remapper,
   return success;
 }
 
+static bool remapUnits(const Remapper &remapper,
+                       const std::vector<std::string> &unitPaths,
+                       const SmallString<256> &outputUnitDirectory) {
+  FileSystemOptions fsOpts;
+  FileManager fileMgr{fsOpts};
+
+  bool success = true;
+
+  for (const auto unitPath : unitPaths) {
+    std::string unitReadError;
+    auto reader = IndexUnitReader::createWithFilePath(unitPath, unitReadError);
+    if (not reader) {
+      errs() << "error: failed to read unit file " << unitPath << "\n"
+             << unitReadError;
+      success = false;
+      continue;
+    }
+
+    ModuleNameScope moduleNames;
+    auto writer = remapUnit(outputUnitDirectory, unitPath, reader, remapper,
+                            fileMgr, moduleNames);
+
+    if (writer.hasValue()) {
+      std::string unitWriteError;
+      if (writer->write(unitWriteError)) {
+        errs() << "error: failed to write index store; " << unitWriteError
+               << "\n";
+        success = false;
+      }
+    }
+  }
+
+  return success;
+}
+
+static bool remapIndex(const Remapper &remapper,
+                       const std::vector<std::string> &unitPaths,
+                       const std::vector<std::string> &recordPaths,
+                       const std::string &outputIndexPath) {
+  SmallString<256> outputUnitDirectory;
+  path::append(outputUnitDirectory, OutputIndexPath, "v5", "units");
+
+  __block bool success = true;
+
+  if (not cloneRecords(recordPaths, outputIndexPath)) {
+    success = false;
+  }
+
+  if (ParallelStride == 0 || ParallelStride >= unitPaths.size()) {
+    if (not remapUnits(remapper, unitPaths, outputUnitDirectory)) {
+      success = false;
+    }
+    return success;
+  }
+
+  // Process the units in groups according to the parallel stride.
+  const size_t stride = static_cast<size_t>(ParallelStride);
+  const size_t length = unitPaths.size();
+  const size_t numStrides = ((length - 1) / stride) + 1;
+
+  dispatch_apply(numStrides, DISPATCH_APPLY_AUTO, ^(size_t strideIndex) {
+    const size_t offset = strideIndex * stride;
+    auto start = unitPaths.begin() + offset;
+    auto end = unitPaths.begin() + std::min(offset + stride, length);
+    std::vector<std::string> unitPathsSlice(start, end);
+    if (not remapUnits(remapper, unitPathsSlice, outputUnitDirectory)) {
+      success = false;
+    }
+  });
+
+  return success;
+}
+
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
@@ -426,6 +553,41 @@ int main(int argc, char **argv) {
                                           initOutputIndexError)) {
     errs() << "error: failed to initialize index store; "
            << initOutputIndexError << "\n";
+    return EXIT_FAILURE;
+  }
+
+  // If given the paths to individual unit paths and records, use those instead
+  // of enumerating directories
+  if (!UnitPathsFile.empty() || !RecordPathsFile.empty()) {
+    if (UnitPathsFile.empty()) {
+      errs() << "record-paths-file set but not unit-paths-file.\n";
+      return EXIT_FAILURE;
+    }
+    if (RecordPathsFile.empty()) {
+      errs() << "unit-paths-file set but not record-paths-file.\n";
+      return EXIT_FAILURE;
+    }
+
+    std::ifstream unitPathsStream(UnitPathsFile);
+    std::vector<std::string> unitPaths;
+    std::string unitPath;
+    while (unitPathsStream >> unitPath) {
+      unitPaths.push_back(unitPath);
+    }
+
+    std::ifstream recordPathsStream(RecordPathsFile);
+    std::vector<std::string> recordPaths;
+    std::string recordPath;
+    while (recordPathsStream >> recordPath) {
+      recordPaths.push_back(recordPath);
+    }
+
+    return remapIndex(remapper, unitPaths, recordPaths, OutputIndexPath)
+               ? EXIT_SUCCESS
+               : EXIT_FAILURE;
+  } else if (InputIndexPaths.empty()) {
+    errs() << "input-indexstores must be set if unit-paths-file and "
+              "record-paths-file are not.\n";
     return EXIT_FAILURE;
   }
 
