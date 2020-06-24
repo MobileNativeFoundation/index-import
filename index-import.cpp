@@ -92,15 +92,14 @@ private:
   std::set<StringRef> _moduleNames;
 };
 
-// Returns a usable FileEntry, even when the path is empty or invalid.
+// Returns a FileEntry for any non-empty path.
 static const FileEntry *getFileEntry(FileManager &fileMgr, StringRef path) {
-  if (not path.empty()) {
-    // Default to getVirtualFile to handle both valid and invalid paths.
-    return fileMgr.getVirtualFile(path, /*size*/ 0, /*modtime*/ 0);
-  } else {
-    // getVirtualFile asserts and fails when called with the empty string.
-    return fileMgr.getFile(path);
+  if (path.empty()) {
+    return nullptr;
   }
+
+  // Use getVirtualFile to handle both valid and invalid paths.
+  return fileMgr.getVirtualFile(path, /*size*/ 0, /*modtime*/ 0);
 }
 
 static IndexUnitWriter remapUnit(const std::unique_ptr<IndexUnitReader> &reader,
