@@ -14,8 +14,8 @@ CHECK: ProviderVersion:
 CHECK: Dependencies:
 CHECK: 	DependencyKind: Unit
 CHECK: 	IsSystem: 1
-CHECK: 	UnitOrRecordName: x86_64-apple-macos.swiftmodule-{{.+}}
-CHECK: 	FilePath: {{.+}}/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/prebuilt-modules/Swift.swiftmodule/x86_64-apple-macos.swiftmodule
+CHECK: 	UnitOrRecordName: x86_64.swiftinterface-{{.+}}
+CHECK: 	FilePath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/usr/lib/swift/Swift.swiftmodule/x86_64.swiftinterface
 CHECK: 	ModuleName: Swift
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 0
@@ -23,10 +23,10 @@ CHECK: 	UnitOrRecordName: input.swift-{{.+}}
 CHECK: 	FilePath: /fake/working/dir/input.swift
 CHECK: 	ModuleName: 
 CHECK: ---
-CHECK: # output/v5/units/x86_64-apple-macos.swiftmodule-{{.+}}
+CHECK: # output/v5/units/x86_64.swiftinterface-{{.+}}
 CHECK: WorkingDirectory: /fake/working/dir
 CHECK: MainFilePath: 
-CHECK: OutputFile: {{.+}}/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/prebuilt-modules/Swift.swiftmodule/x86_64-apple-macos.swiftmodule
+CHECK: OutputFile: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/usr/lib/swift/Swift.swiftmodule/x86_64.swiftinterface
 CHECK: ModuleName: Swift
 CHECK: IsSystemUnit: 1
 CHECK: IsModuleUnit: 1
@@ -38,6 +38,6 @@ CHECK: ProviderVersion:
 CHECK: Dependencies:
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 1
-CHECK: 	UnitOrRecordName: x86_64-apple-macos.swiftmodule-{{.+}}
-CHECK: 	FilePath: {{.+}}/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/prebuilt-modules/Swift.swiftmodule/x86_64-apple-macos.swiftmodule
+CHECK: 	UnitOrRecordName: x86_64.swiftinterface-{{.+}}
+CHECK: 	FilePath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/usr/lib/swift/Swift.swiftmodule/x86_64.swiftinterface
 CHECK: 	ModuleName: Swift
