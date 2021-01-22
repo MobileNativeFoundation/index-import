@@ -75,7 +75,7 @@ index-import \
 
 ## Build Instructions
 
-The build uses [CMake](https://cmake.org) because [swift-clang](https://www.github.com/apple/swift-clang) uses CMake. The `index-import` build script is small, but depends on the larger swift-clang project. To build `index-import`, first [install the tools required by Swift](https://github.com/apple/swift#system-requirements), then build swift-clang by following the [Swift build instructions](https://github.com/apple/swift#building-swift).
+The build uses [CMake](https://cmake.org) because [swift-clang](https://www.github.com/apple/swift-clang) uses CMake. The `index-import` build script is small, but depends on the larger swift-clang project. To build `index-import`, first [install the tools required by Swift](https://github.com/apple/swift/blob/main/docs/HowToGuides/GettingStarted.md#system-requirements), then build swift-clang by following the [Swift build instructions](https://github.com/apple/swift/blob/main/docs/HowToGuides/GettingStarted.md#building-the-project-for-the-first-time).
 
 When building Swift, keep the following in mind:
 
