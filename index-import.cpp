@@ -32,6 +32,13 @@ static cl::alias PathRemapsAlias("r", cl::aliasopt(PathRemaps));
 static cl::list<std::string> InputIndexPaths(cl::Positional, cl::OneOrMore,
                                              cl::desc("<input-indexstores>"));
 
+static cl::list<std::string> RemapFilePaths("import-output-file", cl::OneOrMore,
+                                             cl::desc("import-output-file="));
+// TODO: Remove
+// static cl::opt<std::string>
+//    OnlyModuleName("only-module-name",
+//                cl::desc("Only transfer records for this modue name"));
+
 static cl::opt<std::string> OutputIndexPath(cl::Positional, cl::Required,
                                             cl::desc("<output-indexstore>"));
 
@@ -175,9 +182,39 @@ static bool isUnitUpToDate(StringRef unitsPath, StringRef outputFile,
   return *isUpToDateOpt;
 }
 
+// Append the path of a record inside of an index
+void appendInteriorRecordPath(StringRef RecordName,
+                                     SmallVectorImpl<char> &PathBuf) {
+  // To avoid putting a huge number of files into the records directory, it creates
+  // subdirectories based on the last 2 characters from the hash.
+  // Note: the actual record name is a function of the bits in the record
+  StringRef hash2chars = RecordName.substr(RecordName.size()-2);
+  sys::path::append(PathBuf, hash2chars);
+  sys::path::append(PathBuf, RecordName);
+}
+
+static bool cloneRecord(StringRef from, StringRef to) {
+  // Two record files of the same name are guaranteed to have the same
+  // contents, because the filename contains a hash of its contents. If the
+  // destination record file already exists, no action needs to be taken.
+  if (fs::exists(to)) {
+    return true;
+  }
+
+  // With swift-5.1, fs::copy_file supports cloning. Until then, use copyfile.
+  int failed =
+      copyfile(from.str().c_str(), to.str().c_str(), nullptr, COPYFILE_CLONE);
+
+  // In parallel mode we might be racing against other threads trying to create
+  // the same record. To handle this, just silently drop file exists errors.
+  return (failed == 0 || errno == EEXIST);
+}
+
+
 // Returns None if the Unit file is already up to date
 static Optional<IndexUnitWriter>
-remapUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
+importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
+          StringRef outputRecordsPath, StringRef inputRecordsPath,
           const std::unique_ptr<IndexUnitReader> &reader,
           const Remapper &remapper, FileManager &fileMgr,
           ModuleNameScope &moduleNames) {
@@ -185,7 +222,9 @@ remapUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
   auto workingDir = remapper.remap(reader->getWorkingDirectory());
   auto outputFile = remapper.remap(reader->getOutputFile());
 
-  if (Incremental) {
+  auto cloneDepRecords = outputRecordsPath != "";
+  // TODO: verify incremental with cloneDepRecords
+  if (!cloneDepRecords && Incremental) {
     // Check if the unit file is already up to date
     SmallString<256> remappedOutputFilePath;
     if (outputFile[0] != '/') {
@@ -214,6 +253,16 @@ remapUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
       sysrootPath, moduleNames.getModuleInfo);
 
   reader->foreachDependency([&](const IndexUnitReader::DependencyInfo &info) {
+
+    // TODO: Remove
+    errs() << "DEP: info.FilePath:" << info.FilePath << "\n";
+    errs() << "DEP: info.UnitOrRecordName:" << info.UnitOrRecordName << "\n";
+
+    SmallString<128> inputRecordPath;
+    SmallString<128> outputRecordPath;
+    SmallString<128> outputRecordInterDir;
+    std::error_code createRecordDirFailed;
+
     const auto name = info.UnitOrRecordName;
     const auto moduleNameRef = moduleNames.getReference(info.ModuleName);
     const auto isSystem = info.IsSystem;
@@ -221,6 +270,13 @@ remapUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
     const auto filePath = remapper.remap(info.FilePath);
     const auto file = getFileEntry(fileMgr, filePath);
 
+    // FIXME: Remove
+    // if (OnlyModuleName.length() && info.ModuleName !=  OnlyModuleName) { }
+
+    // TODO: determine if we want to actually add these dependencies for
+    // -import-output-file. With
+    // remote caching, it may leave the index in a funny state. There is some
+    // interesting possibilities here. 
     switch (info.Kind) {
     case IndexUnitReader::DependencyKind::Unit: {
       // The UnitOrRecordName from the input is not used. This is because the
@@ -237,6 +293,29 @@ remapUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
       break;
     }
     case IndexUnitReader::DependencyKind::Record:
+      if (cloneDepRecords) {
+        // If we're cloning records then do so here
+        sys::path::append(outputRecordPath, outputRecordsPath);
+        appendInteriorRecordPath(info.UnitOrRecordName, outputRecordPath);
+
+        // Compute/create the new interior directory by dropping the file name
+        outputRecordInterDir = outputRecordPath;
+        sys::path::remove_filename(outputRecordInterDir);
+        createRecordDirFailed = fs::create_directory(outputRecordInterDir);
+        if (createRecordDirFailed && createRecordDirFailed != std::errc::file_exists) {
+            errs() << "error: failed create output record dir" << outputRecordInterDir << "\n";
+        }
+
+        sys::path::append(inputRecordPath, inputRecordsPath);
+        appendInteriorRecordPath(info.UnitOrRecordName, inputRecordPath);
+
+        // TODO: Consider re-working original concurrency strategy
+        // we can have per index-store importing parallelism if necessary. It
+        // might not be necessary if this operation is an order of milliseconds
+        //
+        // TODO: Do we need to convert these LLVM StringRef's like this?
+        cloneRecord(StringRef(inputRecordPath.c_str()), StringRef(outputRecordPath.c_str()));
+      }
       writer.addRecordFile(name, file, isSystem, moduleNameRef);
       break;
     case IndexUnitReader::DependencyKind::File:
@@ -250,6 +329,7 @@ remapUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
     const auto sourcePath = remapper.remap(info.SourcePath);
     const auto targetPath = remapper.remap(info.TargetPath);
 
+    // TODO: how should we handle headers here
     // Note this isn't relevant to Swift.
     writer.addInclude(getFileEntry(fileMgr, sourcePath), info.SourceLine,
                       getFileEntry(fileMgr, targetPath));
@@ -257,23 +337,6 @@ remapUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
   });
 
   return writer;
-}
-
-static bool cloneRecord(StringRef from, StringRef to) {
-  // Two record files of the same name are guaranteed to have the same
-  // contents, because the filename contains a hash of its contents. If the
-  // destination record file already exists, no action needs to be taken.
-  if (fs::exists(to)) {
-    return true;
-  }
-
-  // With swift-5.1, fs::copy_file supports cloning. Until then, use copyfile.
-  int failed =
-      copyfile(from.str().c_str(), to.str().c_str(), nullptr, COPYFILE_CLONE);
-
-  // In parallel mode we might be racing against other threads trying to create
-  // the same record. To handle this, just silently drop file exists errors.
-  return (failed == 0 || errno == EEXIST);
 }
 
 static bool cloneRecords(StringRef recordsDirectory,
@@ -341,6 +404,8 @@ static bool remapIndex(const Remapper &remapper,
   path::append(recordsDirectory, InputIndexPath, "v5", "records");
   SmallString<256> outputUnitDirectory;
   path::append(outputUnitDirectory, OutputIndexPath, "v5", "units");
+  SmallString<256> outputRecordsDirectory;
+  path::append(outputRecordsDirectory, OutputIndexPath, "v5", "records");
 
   if (not fs::is_directory(unitDirectory) ||
       not fs::is_directory(recordsDirectory)) {
@@ -348,14 +413,52 @@ static bool remapIndex(const Remapper &remapper,
     return false;
   }
   bool success = true;
+  FileSystemOptions fsOpts;
+  FileManager fileMgr{fsOpts};
 
+  // Map over the file paths that the user provided
+  // FIXME: find a better way to integrate this with the old way if we want to
+  // upstream to index-import
+  if (RemapFilePaths.size()) {
+    for (auto & path : RemapFilePaths) {
+      SmallString<256> outPath;
+      getUnitPathForOutputFile(unitDirectory, normalizePath(path), outPath, fileMgr);
+
+      auto unitPath = outPath.c_str();
+      std::string unitReadError;
+      auto reader = IndexUnitReader::createWithFilePath(unitPath, unitReadError);
+      if (not reader) {
+        errs() << "error: failed to read unit file " << unitPath << "\n"
+               << unitReadError;
+        success = false;
+        continue;
+      }
+
+      ModuleNameScope moduleNames;
+      auto writer = importUnit(outputUnitDirectory, unitPath,
+              outputRecordsDirectory, recordsDirectory, reader, remapper, fileMgr,
+              moduleNames);
+
+
+      if (writer.hasValue()) {
+        std::string unitWriteError;
+        if (writer->write(unitWriteError)) {
+          errs() << "error: failed to write index store; " << unitWriteError
+                 << "\n";
+          success = false;
+        }
+      }
+    }
+    return success;
+  }
+
+  // This batch clones records in the entire index. If we're importing individual
+  // ouput files we don't want this.
   if (not cloneRecords(recordsDirectory, InputIndexPath, outputIndexPath)) {
     success = false;
   }
 
-  FileSystemOptions fsOpts;
-  FileManager fileMgr{fsOpts};
-
+  // Process and map the entire index directory
   std::error_code dirError;
   fs::directory_iterator dir{unitDirectory, dirError};
   fs::directory_iterator end;
@@ -378,8 +481,9 @@ static bool remapIndex(const Remapper &remapper,
     }
 
     ModuleNameScope moduleNames;
-    auto writer = remapUnit(outputUnitDirectory, unitPath, reader, remapper,
-                            fileMgr, moduleNames);
+    auto writer = importUnit(outputUnitDirectory, unitPath,
+            "", "", reader, remapper, fileMgr,
+            moduleNames);
 
     if (writer.hasValue()) {
       std::string unitWriteError;
