@@ -32,7 +32,7 @@ static cl::alias PathRemapsAlias("r", cl::aliasopt(PathRemaps));
 static cl::list<std::string> InputIndexPaths(cl::Positional, cl::OneOrMore,
                                              cl::desc("<input-indexstores>"));
 
-static cl::list<std::string> RemapFilePaths("import-output-file", cl::OneOrMore,
+static cl::list<std::string> RemapFilePaths("import-output-file",
                                              cl::desc("import-output-file="));
 static cl::opt<std::string> OutputIndexPath(cl::Positional, cl::Required,
                                             cl::desc("<output-indexstore>"));
@@ -220,8 +220,7 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
   // Cloning records when we've got an output records path
   const auto cloneDepRecords = !outputRecordsPath.empty();
 
-  // TODO: verify incremental with cloneDepRecords
-  if (!cloneDepRecords && Incremental) {
+  if (Incremental) {
     // Check if the unit file is already up to date
     SmallString<256> remappedOutputFilePath;
     if (outputFile[0] != '/') {
