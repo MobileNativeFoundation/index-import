@@ -34,11 +34,6 @@ static cl::list<std::string> InputIndexPaths(cl::Positional, cl::OneOrMore,
 
 static cl::list<std::string> RemapFilePaths("import-output-file", cl::OneOrMore,
                                              cl::desc("import-output-file="));
-// TODO: Remove
-// static cl::opt<std::string>
-//    OnlyModuleName("only-module-name",
-//                cl::desc("Only transfer records for this modue name"));
-
 static cl::opt<std::string> OutputIndexPath(cl::Positional, cl::Required,
                                             cl::desc("<output-indexstore>"));
 
@@ -222,7 +217,9 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
   auto workingDir = remapper.remap(reader->getWorkingDirectory());
   auto outputFile = remapper.remap(reader->getOutputFile());
 
-  auto cloneDepRecords = outputRecordsPath != "";
+  // Cloning records when we've got an output records path
+  const auto cloneDepRecords = !outputRecordsPath.empty();
+
   // TODO: verify incremental with cloneDepRecords
   if (!cloneDepRecords && Incremental) {
     // Check if the unit file is already up to date
@@ -253,11 +250,6 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
       sysrootPath, moduleNames.getModuleInfo);
 
   reader->foreachDependency([&](const IndexUnitReader::DependencyInfo &info) {
-
-    // TODO: Remove
-    errs() << "DEP: info.FilePath:" << info.FilePath << "\n";
-    errs() << "DEP: info.UnitOrRecordName:" << info.UnitOrRecordName << "\n";
-
     SmallString<128> inputRecordPath;
     SmallString<128> outputRecordPath;
     SmallString<128> outputRecordInterDir;
@@ -270,13 +262,6 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
     const auto filePath = remapper.remap(info.FilePath);
     const auto file = getFileEntry(fileMgr, filePath);
 
-    // FIXME: Remove
-    // if (OnlyModuleName.length() && info.ModuleName !=  OnlyModuleName) { }
-
-    // TODO: determine if we want to actually add these dependencies for
-    // -import-output-file. With
-    // remote caching, it may leave the index in a funny state. There is some
-    // interesting possibilities here. 
     switch (info.Kind) {
     case IndexUnitReader::DependencyKind::Unit: {
       // The UnitOrRecordName from the input is not used. This is because the
@@ -294,7 +279,6 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
     }
     case IndexUnitReader::DependencyKind::Record:
       if (cloneDepRecords) {
-        // If we're cloning records then do so here
         sys::path::append(outputRecordPath, outputRecordsPath);
         appendInteriorRecordPath(info.UnitOrRecordName, outputRecordPath);
 
@@ -303,18 +287,11 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
         sys::path::remove_filename(outputRecordInterDir);
         createRecordDirFailed = fs::create_directory(outputRecordInterDir);
         if (createRecordDirFailed && createRecordDirFailed != std::errc::file_exists) {
-            errs() << "error: failed create output record dir" << outputRecordInterDir << "\n";
+          errs() << "error: failed create output record dir" << outputRecordInterDir << "\n";
         }
-
         sys::path::append(inputRecordPath, inputRecordsPath);
         appendInteriorRecordPath(info.UnitOrRecordName, inputRecordPath);
-
-        // TODO: Consider re-working original concurrency strategy
-        // we can have per index-store importing parallelism if necessary. It
-        // might not be necessary if this operation is an order of milliseconds
-        //
-        // TODO: Do we need to convert these LLVM StringRef's like this?
-        cloneRecord(StringRef(inputRecordPath.c_str()), StringRef(outputRecordPath.c_str()));
+        cloneRecord(StringRef(inputRecordPath), StringRef(outputRecordPath));
       }
       writer.addRecordFile(name, file, isSystem, moduleNameRef);
       break;
@@ -329,7 +306,6 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
     const auto sourcePath = remapper.remap(info.SourcePath);
     const auto targetPath = remapper.remap(info.TargetPath);
 
-    // TODO: how should we handle headers here
     // Note this isn't relevant to Swift.
     writer.addInclude(getFileEntry(fileMgr, sourcePath), info.SourceLine,
                       getFileEntry(fileMgr, targetPath));
@@ -412,42 +388,41 @@ static bool remapIndex(const Remapper &remapper,
     errs() << "error: invalid index store directory " << InputIndexPath << "\n";
     return false;
   }
+
   bool success = true;
   FileSystemOptions fsOpts;
   FileManager fileMgr{fsOpts};
 
+  auto handleUnitPath = [&](StringRef unitPath, StringRef outputRecordsPath_) {
+    std::string unitReadError;
+    auto reader = IndexUnitReader::createWithFilePath(unitPath, unitReadError);
+    if (not reader) {
+      errs() << "error: failed to read unit file " << unitPath << "\n"
+             << unitReadError;
+      success = false;
+      return;
+    }
+
+    ModuleNameScope moduleNames;
+    auto writer = importUnit(outputUnitDirectory, unitPath, outputRecordsPath_,
+        recordsDirectory, reader, remapper, fileMgr, moduleNames);
+
+    if (writer.hasValue()) {
+      std::string unitWriteError;
+      if (writer->write(unitWriteError)) {
+        errs() << "error: failed to write index store; " << unitWriteError
+               << "\n";
+        success = false;
+      }
+    }
+  };
+
   // Map over the file paths that the user provided
-  // FIXME: find a better way to integrate this with the old way if we want to
-  // upstream to index-import
   if (RemapFilePaths.size()) {
     for (auto & path : RemapFilePaths) {
       SmallString<256> outPath;
       getUnitPathForOutputFile(unitDirectory, normalizePath(path), outPath, fileMgr);
-
-      auto unitPath = outPath.c_str();
-      std::string unitReadError;
-      auto reader = IndexUnitReader::createWithFilePath(unitPath, unitReadError);
-      if (not reader) {
-        errs() << "error: failed to read unit file " << unitPath << "\n"
-               << unitReadError;
-        success = false;
-        continue;
-      }
-
-      ModuleNameScope moduleNames;
-      auto writer = importUnit(outputUnitDirectory, unitPath,
-              outputRecordsDirectory, recordsDirectory, reader, remapper, fileMgr,
-              moduleNames);
-
-
-      if (writer.hasValue()) {
-        std::string unitWriteError;
-        if (writer->write(unitWriteError)) {
-          errs() << "error: failed to write index store; " << unitWriteError
-                 << "\n";
-          success = false;
-        }
-      }
+      handleUnitPath(outPath.c_str(), outputRecordsDirectory);
     }
     return success;
   }
@@ -465,34 +440,7 @@ static bool remapIndex(const Remapper &remapper,
   while (dir != end && !dirError) {
     const auto unitPath = dir->path();
     dir.increment(dirError);
-
-    if (unitPath.empty()) {
-      // The directory iterator returns a single empty path, ignore it.
-      continue;
-    }
-
-    std::string unitReadError;
-    auto reader = IndexUnitReader::createWithFilePath(unitPath, unitReadError);
-    if (not reader) {
-      errs() << "error: failed to read unit file " << unitPath << "\n"
-             << unitReadError;
-      success = false;
-      continue;
-    }
-
-    ModuleNameScope moduleNames;
-    auto writer = importUnit(outputUnitDirectory, unitPath,
-            "", "", reader, remapper, fileMgr,
-            moduleNames);
-
-    if (writer.hasValue()) {
-      std::string unitWriteError;
-      if (writer->write(unitWriteError)) {
-        errs() << "error: failed to write index store; " << unitWriteError
-               << "\n";
-        success = false;
-      }
-    }
+    handleUnitPath(unitPath, "");
   }
 
   if (dirError) {
