@@ -24,7 +24,7 @@ using namespace clang;
 using namespace clang::index;
 using namespace clang::index::writer;
 
-static cl::list<std::string> PathRemaps("remap", cl::OneOrMore,
+static cl::list<std::string> PathRemaps("remap",
                                         cl::desc("Path remapping substitution"),
                                         cl::value_desc("regex=replacement"));
 static cl::alias PathRemapsAlias("r", cl::aliasopt(PathRemaps));
