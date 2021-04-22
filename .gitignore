@@ -1,3 +1,8 @@
+*.tar.gz
+/absolute-unit
+/armbuild/
 /build/
+/index-import
+/intelbuild/
 /tests/*/input*/
 /tests/*/output/
