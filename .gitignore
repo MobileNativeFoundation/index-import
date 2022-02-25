@@ -1,7 +1,9 @@
 *.tar.gz
+/.cache/clangd
 /absolute-unit
 /armbuild/
 /build/
+/compile_commands.json
 /index-import
 /intelbuild/
 /tests/*/input*/
