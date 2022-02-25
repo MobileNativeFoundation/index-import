@@ -1,38 +1,38 @@
 CHECK: ---
 CHECK: # output/v5/units/output1.c.o-{{.+}}
 CHECK: WorkingDirectory: /fake/working/dir
-CHECK: MainFilePath: 
+CHECK: MainFilePath:
 CHECK: OutputFile: output1.c.o
-CHECK: ModuleName: 
+CHECK: ModuleName:
 CHECK: IsSystemUnit: 0
 CHECK: IsModuleUnit: 0
 CHECK: IsDebugCompilation: 1
-CHECK: CompilationTarget: x86_64-apple-macosx10.{{.+}}
+CHECK: CompilationTarget: {{x86_64|arm64}}-apple-macosx10.{{.+}}
 CHECK: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk
 CHECK: ProviderIdentifier: clang
 CHECK: ProviderVersion: {{.+}}
 CHECK: Dependencies:
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 0
-CHECK: 	UnitOrRecordName: input1.c-25D1KZY099GN2
+CHECK: 	UnitOrRecordName: input1.c-H8E66JWPU5WU
 CHECK: 	FilePath: input1.c
-CHECK: 	ModuleName: 
+CHECK: 	ModuleName:
 CHECK: ---
 CHECK: # output/v5/units/output2.c.o-{{.+}}
 CHECK: WorkingDirectory: /fake/working/dir
-CHECK: MainFilePath: 
+CHECK: MainFilePath:
 CHECK: OutputFile: output2.c.o
-CHECK: ModuleName: 
+CHECK: ModuleName:
 CHECK: IsSystemUnit: 0
 CHECK: IsModuleUnit: 0
 CHECK: IsDebugCompilation: 1
-CHECK: CompilationTarget: x86_64-apple-macosx10.{{.+}}
+CHECK: CompilationTarget: {{x86_64|arm64}}-apple-macosx10.{{.+}}
 CHECK: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk
 CHECK: ProviderIdentifier: clang
 CHECK: ProviderVersion: {{.+}}
 CHECK: Dependencies:
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 0
-CHECK: 	UnitOrRecordName: input2.c-1F2N5TQ6O2TRL
+CHECK: 	UnitOrRecordName: input2.c-1UNY7PC9RPELF
 CHECK: 	FilePath: input2.c
-CHECK: 	ModuleName: 
+CHECK: 	ModuleName:

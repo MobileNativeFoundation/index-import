@@ -5,7 +5,7 @@ set -euo pipefail
 readonly base_dir=$(dirname "$0")
 
 clang() {
-    xcrun --sdk macosx clang "$@"
+    xcrun --sdk macosx clang -mmacosx-version-min=10.0.0 "$@"
 }
 
 ############################################################
@@ -30,7 +30,7 @@ clang -fsyntax-only -index-store-path input input.c
 
 # Check that the expected index files exist.
 ls output/v5/units/output.c.o-1I92L511L7IRP >/dev/null
-ls output/v5/records/CS/input.c-1GAVGMEKRGFCS >/dev/null
+ls output/v5/records/2F/input.c-50XRP2AC092F >/dev/null
 
 # Check that the record files are identical.
 diff -q -r {input,output}/v5/records/
@@ -47,7 +47,7 @@ pushd "$base_dir"/swiftc >/dev/null
 rm -fr input output
 
 # Produce the index and delete the unneeded .o.
-xcrun swiftc -index-store-path input -c input.swift && rm input.o
+xcrun swiftc -target "$(uname -m)-apple-macosx10.9.0" -index-store-path input -c input.swift && rm input.o
 
 ../../build/index-import \
   -remap input.o=output.o \
@@ -55,7 +55,7 @@ xcrun swiftc -index-store-path input -c input.swift && rm input.o
   input output
 
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
-../../build/absolute-unit output/v5/units/* \
+../../build/absolute-unit output/v5/units/output* output/v5/units/*.swiftinterface* \
   | FileCheck expected.txt
 
 # Check that the expected index files exist.
@@ -93,8 +93,8 @@ clang -fsyntax-only -index-store-path input2 input2.c
 # Check that the expected index files exist.
 ls output/v5/units/output1.c.o-ZW8ISK3OCQ8L >/dev/null
 ls output/v5/units/output2.c.o-1ZBCL54RNWOPC >/dev/null
-ls output/v5/records/N2/input1.c-25D1KZY099GN2 >/dev/null
-ls output/v5/records/RL/input2.c-1F2N5TQ6O2TRL >/dev/null
+ls output/v5/records/WU/input1.c-H8E66JWPU5WU >/dev/null
+ls output/v5/records/LF/input2.c-1UNY7PC9RPELF >/dev/null
 
 # Check that the record files are identical.
 for record in {input1,input2}/v5/records/*; do

@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
       continue;
     }
 
-    const std::vector<std::pair<std::string, std::string>> unitPaths = {
+    const std::vector<std::pair<std::string, llvm::StringRef>> unitPaths = {
         {"MainFilePath", reader->getMainFilePath()},
         {"SysrootPath", reader->getSysrootPath()},
         {"WorkingDirectory", reader->getWorkingDirectory()},
