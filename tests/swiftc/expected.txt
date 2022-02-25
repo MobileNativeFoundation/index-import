@@ -1,43 +1,43 @@
 CHECK: ---
 CHECK: # output/v5/units/output.o-{{.+}}
 CHECK: WorkingDirectory: /fake/working/dir
-CHECK: MainFilePath: 
+CHECK: MainFilePath:
 CHECK: OutputFile: output.o
 CHECK: ModuleName: input
 CHECK: IsSystemUnit: 0
 CHECK: IsModuleUnit: 0
 CHECK: IsDebugCompilation: 1
-CHECK: CompilationTarget: x86_64-apple-macosx10.{{.+}}
+CHECK: CompilationTarget: {{x86_64|arm64}}-apple-macosx10.{{.+}}
 CHECK: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.*}}.sdk
 CHECK: ProviderIdentifier: swift
-CHECK: ProviderVersion: 
+CHECK: ProviderVersion:
 CHECK: Dependencies:
 CHECK: 	DependencyKind: Unit
 CHECK: 	IsSystem: 1
-CHECK: 	UnitOrRecordName: x86_64.swiftinterface-{{.+}}
-CHECK: 	FilePath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/usr/lib/swift/Swift.swiftmodule/x86_64.swiftinterface
+CHECK: 	UnitOrRecordName: {{x86_64|arm64e}}-apple-macos.swiftinterface-{{.+}}
+CHECK: 	FilePath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.*}}.sdk/usr/lib/swift/Swift.swiftmodule/{{x86_64|arm64e}}-apple-macos.swiftinterface
 CHECK: 	ModuleName: Swift
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 0
 CHECK: 	UnitOrRecordName: input.swift-{{.+}}
 CHECK: 	FilePath: /fake/working/dir/input.swift
-CHECK: 	ModuleName: 
+CHECK: 	ModuleName:
 CHECK: ---
-CHECK: # output/v5/units/x86_64.swiftinterface-{{.+}}
+CHECK: # output/v5/units/{{x86_64|arm64e}}-apple-macos.swiftinterface-{{.+}}
 CHECK: WorkingDirectory: /fake/working/dir
-CHECK: MainFilePath: 
-CHECK: OutputFile: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/usr/lib/swift/Swift.swiftmodule/x86_64.swiftinterface
+CHECK: MainFilePath:
+CHECK: OutputFile: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk/usr/lib/swift/Swift.swiftmodule/{{x86_64|arm64e}}-apple-macos.swiftinterface
 CHECK: ModuleName: Swift
 CHECK: IsSystemUnit: 1
 CHECK: IsModuleUnit: 1
 CHECK: IsDebugCompilation: 1
-CHECK: CompilationTarget: x86_64-apple-macosx10.{{.+}}
+CHECK: CompilationTarget: {{x86_64|arm64}}-apple-macosx10.{{.+}}
 CHECK: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk
 CHECK: ProviderIdentifier: swift
-CHECK: ProviderVersion: 
+CHECK: ProviderVersion:
 CHECK: Dependencies:
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 1
-CHECK: 	UnitOrRecordName: x86_64.swiftinterface-{{.+}}
-CHECK: 	FilePath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/usr/lib/swift/Swift.swiftmodule/x86_64.swiftinterface
+CHECK: 	UnitOrRecordName: {{x86_64|arm64e}}-apple-macos.swiftinterface-{{.+}}
+CHECK: 	FilePath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk/usr/lib/swift/Swift.swiftmodule/{{x86_64|arm64e}}-apple-macos.swiftinterface
 CHECK: 	ModuleName: Swift

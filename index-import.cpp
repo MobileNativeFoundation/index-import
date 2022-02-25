@@ -48,13 +48,14 @@ static cl::opt<bool>
 
 struct Remapper {
 public:
-  std::string remap(const std::string &input) const {
+  std::string remap(const llvm::StringRef input) const {
+    std::string input_str = input.str();
     for (const auto &remap : this->_remaps) {
       const auto &pattern = std::get<std::regex>(remap);
       const auto &replacement = std::get<std::string>(remap);
 
       std::smatch match;
-      if (std::regex_search(input, match, pattern)) {
+      if (std::regex_search(input_str, match, pattern)) {
         // I haven't seen this design in other regex APIs, and is worth some
         // explanation. The replacement string is conceptually a format string.
         // The format() function takes no explicit arguments, instead it gets
@@ -65,7 +66,7 @@ public:
     }
 
     // No patterns matched, return the input unaltered.
-    return input;
+    return input_str;
   }
 
   void addRemap(const std::regex &pattern, const std::string &replacement) {
@@ -367,7 +368,7 @@ static std::string normalizePath(StringRef Path) {
     if (*I != ".")
       sys::path::append(NormalizedPath, *I);
   }
-  return NormalizedPath.str();
+  return NormalizedPath.str().str();
 }
 
 static bool remapIndex(const Remapper &remapper,
