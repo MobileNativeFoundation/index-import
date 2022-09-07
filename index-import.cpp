@@ -33,7 +33,7 @@ static cl::list<std::string> InputIndexPaths(cl::Positional, cl::OneOrMore,
                                              cl::desc("<input-indexstores>"));
 
 static cl::list<std::string> RemapFilePaths("import-output-file",
-                                             cl::desc("import-output-file="));
+                                            cl::desc("import-output-file="));
 static cl::opt<std::string> OutputIndexPath(cl::Positional, cl::Required,
                                             cl::desc("<output-indexstore>"));
 
@@ -180,11 +180,11 @@ static bool isUnitUpToDate(StringRef unitsPath, StringRef outputFile,
 
 // Append the path of a record inside of an index
 void appendInteriorRecordPath(StringRef RecordName,
-                                     SmallVectorImpl<char> &PathBuf) {
-  // To avoid putting a huge number of files into the records directory, it creates
-  // subdirectories based on the last 2 characters from the hash.
-  // Note: the actual record name is a function of the bits in the record
-  StringRef hash2chars = RecordName.substr(RecordName.size()-2);
+                              SmallVectorImpl<char> &PathBuf) {
+  // To avoid putting a huge number of files into the records directory, it
+  // creates subdirectories based on the last 2 characters from the hash. Note:
+  // the actual record name is a function of the bits in the record
+  StringRef hash2chars = RecordName.substr(RecordName.size() - 2);
   sys::path::append(PathBuf, hash2chars);
   sys::path::append(PathBuf, RecordName);
 }
@@ -206,14 +206,13 @@ static bool cloneRecord(StringRef from, StringRef to) {
   return (failed == 0 || errno == EEXIST);
 }
 
-
 // Returns None if the Unit file is already up to date
 static Optional<IndexUnitWriter>
 importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
-          StringRef outputRecordsPath, StringRef inputRecordsPath,
-          const std::unique_ptr<IndexUnitReader> &reader,
-          const Remapper &remapper, FileManager &fileMgr,
-          ModuleNameScope &moduleNames) {
+           StringRef outputRecordsPath, StringRef inputRecordsPath,
+           const std::unique_ptr<IndexUnitReader> &reader,
+           const Remapper &remapper, FileManager &fileMgr,
+           ModuleNameScope &moduleNames) {
   // The set of remapped paths.
   auto workingDir = remapper.remap(reader->getWorkingDirectory());
   auto outputFile = remapper.remap(reader->getOutputFile());
@@ -286,8 +285,10 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
         outputRecordInterDir = outputRecordPath;
         sys::path::remove_filename(outputRecordInterDir);
         createRecordDirFailed = fs::create_directory(outputRecordInterDir);
-        if (createRecordDirFailed && createRecordDirFailed != std::errc::file_exists) {
-          errs() << "error: failed create output record dir" << outputRecordInterDir << "\n";
+        if (createRecordDirFailed &&
+            createRecordDirFailed != std::errc::file_exists) {
+          errs() << "error: failed create output record dir"
+                 << outputRecordInterDir << "\n";
         }
         sys::path::append(inputRecordPath, inputRecordsPath);
         appendInteriorRecordPath(info.UnitOrRecordName, inputRecordPath);
@@ -404,8 +405,9 @@ static bool remapIndex(const Remapper &remapper,
     }
 
     ModuleNameScope moduleNames;
-    auto writer = importUnit(outputUnitDirectory, unitPath, outputRecordsPath_,
-        recordsDirectory, reader, remapper, fileMgr, moduleNames);
+    auto writer =
+        importUnit(outputUnitDirectory, unitPath, outputRecordsPath_,
+                   recordsDirectory, reader, remapper, fileMgr, moduleNames);
 
     if (writer.hasValue()) {
       std::string unitWriteError;
@@ -419,16 +421,17 @@ static bool remapIndex(const Remapper &remapper,
 
   // Map over the file paths that the user provided
   if (RemapFilePaths.size()) {
-    for (auto & path : RemapFilePaths) {
+    for (auto &path : RemapFilePaths) {
       SmallString<256> outPath;
-      getUnitPathForOutputFile(unitDirectory, normalizePath(path), outPath, fileMgr);
+      getUnitPathForOutputFile(unitDirectory, normalizePath(path), outPath,
+                               fileMgr);
       handleUnitPath(outPath.c_str(), outputRecordsDirectory);
     }
     return success;
   }
 
-  // This batch clones records in the entire index. If we're importing individual
-  // ouput files we don't want this.
+  // This batch clones records in the entire index. If we're importing
+  // individual ouput files we don't want this.
   if (not cloneRecords(recordsDirectory, InputIndexPath, outputIndexPath)) {
     success = false;
   }
