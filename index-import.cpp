@@ -384,8 +384,10 @@ static bool remapIndex(const Remapper &remapper,
   SmallString<256> outputRecordsDirectory;
   path::append(outputRecordsDirectory, OutputIndexPath, "v5", "records");
 
+  bool recordsDirectoryExists = fs::exists(recordsDirectory);
+
   if (not fs::is_directory(unitDirectory) ||
-      not fs::is_directory(recordsDirectory)) {
+      (recordsDirectoryExists && not fs::is_directory(recordsDirectory))) {
     errs() << "error: invalid index store directory " << InputIndexPath << "\n";
     return false;
   }
@@ -432,8 +434,10 @@ static bool remapIndex(const Remapper &remapper,
 
   // This batch clones records in the entire index. If we're importing
   // individual ouput files we don't want this.
-  if (not cloneRecords(recordsDirectory, InputIndexPath, outputIndexPath)) {
-    success = false;
+  if (recordsDirectoryExists) {
+    if (not cloneRecords(recordsDirectory, InputIndexPath, outputIndexPath)) {
+      success = false;
+    }
   }
 
   // Process and map the entire index directory
