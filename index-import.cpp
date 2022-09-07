@@ -46,6 +46,13 @@ static cl::opt<bool>
     Incremental("incremental",
                 cl::desc("Only transfer units if they are newer"));
 
+static cl::opt<bool> UndoRulesSwiftRenames(
+    "undo-rules_swift-renames",
+    cl::desc(
+        "Until Bazel 6.0, rules_swift replaces spaces in object files with "
+        "'__SPACE__'. Using this flag undoes that replacement, changing "
+        "'__SPACE__' into ' '. This flag will be removed in the future."));
+
 struct Remapper {
 public:
   std::string remap(const llvm::StringRef input) const {
@@ -215,7 +222,18 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
            ModuleNameScope &moduleNames) {
   // The set of remapped paths.
   auto workingDir = remapper.remap(reader->getWorkingDirectory());
-  auto outputFile = remapper.remap(reader->getOutputFile());
+
+  auto originalOutputFilePath = std::string(reader->getOutputFile());
+  if (UndoRulesSwiftRenames) {
+    // Replace all instances of "__SPACE__" iwith " "
+    std::string::size_type start = 0;
+    while ((start = originalOutputFilePath.find("__SPACE__", start)) !=
+           std::string::npos) {
+      originalOutputFilePath.replace(start, 9, " ");
+      start += 1;
+    }
+  }
+  auto outputFile = remapper.remap(originalOutputFilePath);
 
   // Cloning records when we've got an output records path
   const auto cloneDepRecords = !outputRecordsPath.empty();
