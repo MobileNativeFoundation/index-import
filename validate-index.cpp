@@ -9,6 +9,7 @@
 
 using namespace llvm;
 using namespace llvm::sys;
+using namespace clang;
 using namespace clang::index;
 
 static cl::opt<std::string> IndexStore(cl::Positional, cl::Required,
@@ -23,8 +24,10 @@ static void logMissingFile(StringRef unitName, StringRef key, StringRef path) {
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
+  PathRemapper clangPathRemapper;
+
   std::string storeError{};
-  auto store = IndexDataStore::create(IndexStore, storeError);
+  auto store = IndexDataStore::create(IndexStore, clangPathRemapper, storeError);
   if (not store) {
     errs() << "error: failed to open indexstore " << IndexStore << " -- "
            << storeError << "\n";
@@ -40,8 +43,8 @@ int main(int argc, char **argv) {
   auto exitStatus = EXIT_SUCCESS;
   for (const auto &unitName : unitNames) {
     std::string readerError;
-    auto reader = IndexUnitReader::createWithUnitFilename(unitName, IndexStore,
-                                                          readerError);
+    auto reader = IndexUnitReader::createWithUnitFilename(
+        unitName, IndexStore, store->getPathRemapper(), readerError);
     if (not reader) {
       exitStatus = EXIT_FAILURE;
       errs() << "error: failed to read unit file " << unitName << " -- "

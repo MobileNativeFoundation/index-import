@@ -218,8 +218,8 @@ static Optional<IndexUnitWriter>
 importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
            StringRef outputRecordsPath, StringRef inputRecordsPath,
            const std::unique_ptr<IndexUnitReader> &reader,
-           const Remapper &remapper, FileManager &fileMgr,
-           ModuleNameScope &moduleNames) {
+           const Remapper &remapper, const PathRemapper &clangPathRemapper,
+           FileManager &fileMgr, ModuleNameScope &moduleNames) {
   // The set of remapped paths.
   auto workingDir = remapper.remap(reader->getWorkingDirectory());
 
@@ -264,7 +264,7 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
       reader->getProviderVersion(), outputFile, reader->getModuleName(),
       getFileEntry(fileMgr, mainFilePath), reader->isSystemUnit(),
       reader->isModuleUnit(), reader->isDebugCompilation(), reader->getTarget(),
-      sysrootPath, moduleNames.getModuleInfo);
+      sysrootPath, clangPathRemapper, moduleNames.getModuleInfo);
 
   reader->foreachDependency([&](const IndexUnitReader::DependencyInfo &info) {
     SmallString<128> inputRecordPath;
@@ -391,6 +391,7 @@ static std::string normalizePath(StringRef Path) {
 }
 
 static bool remapIndex(const Remapper &remapper,
+                       const PathRemapper &clangPathRemapper,
                        const std::string &InputIndexPath,
                        const std::string &outputIndexPath) {
   SmallString<256> unitDirectory;
@@ -413,7 +414,8 @@ static bool remapIndex(const Remapper &remapper,
 
   auto handleUnitPath = [&](StringRef unitPath, StringRef outputRecordsPath_) {
     std::string unitReadError;
-    auto reader = IndexUnitReader::createWithFilePath(unitPath, unitReadError);
+    auto reader = IndexUnitReader::createWithFilePath(
+        unitPath, clangPathRemapper, unitReadError);
     if (not reader) {
       errs() << "error: failed to read unit file " << unitPath << "\n"
              << unitReadError;
@@ -422,9 +424,9 @@ static bool remapIndex(const Remapper &remapper,
     }
 
     ModuleNameScope moduleNames;
-    auto writer =
-        importUnit(outputUnitDirectory, unitPath, outputRecordsPath_,
-                   recordsDirectory, reader, remapper, fileMgr, moduleNames);
+    auto writer = importUnit(outputUnitDirectory, unitPath, outputRecordsPath_,
+                             recordsDirectory, reader, remapper,
+                             clangPathRemapper, fileMgr, moduleNames);
 
     if (writer.hasValue()) {
       std::string unitWriteError;
@@ -478,6 +480,8 @@ int main(int argc, char **argv) {
 
   OutputIndexPath = normalizePath(OutputIndexPath);
 
+  PathRemapper clangPathRemapper;
+
   Remapper remapper;
   // Parse the the path remapping command line flags. This converts strings of
   // "X=Y" into a (regex, string) pair. Another way of looking at it: each
@@ -515,7 +519,8 @@ int main(int argc, char **argv) {
     bool success = true;
     for (auto &InputIndexPath : InputIndexPaths) {
       InputIndexPath = normalizePath(InputIndexPath);
-      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath)) {
+      if (not remapIndex(remapper, clangPathRemapper, InputIndexPath,
+                         OutputIndexPath)) {
         success = false;
       }
     }
@@ -533,7 +538,8 @@ int main(int argc, char **argv) {
     const size_t end = std::min(start + stride, length);
     for (size_t index = start; index < end; ++index) {
       std::string InputIndexPath = normalizePath(InputIndexPaths[index]);
-      if (not remapIndex(remapper, InputIndexPath, OutputIndexPath)) {
+      if (not remapIndex(remapper, clangPathRemapper, InputIndexPath,
+                         OutputIndexPath)) {
         success = false;
       }
     }
