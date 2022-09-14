@@ -2,6 +2,7 @@
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+using namespace clang;
 using namespace clang::index;
 
 static cl::list<std::string> UnitPaths(cl::Positional, cl::OneOrMore,
@@ -24,8 +25,10 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
   for (const auto &unitPath : UnitPaths) {
+    PathRemapper clangPathRemapper;
     std::string readerError;
-    auto reader = IndexUnitReader::createWithFilePath(unitPath, readerError);
+    auto reader = IndexUnitReader::createWithFilePath(
+        unitPath, clangPathRemapper, readerError);
     if (not reader) {
       errs() << "error: failed to read unit file " << unitPath << " -- "
              << readerError << "\n";
@@ -55,7 +58,8 @@ int main(int argc, char **argv) {
         needsHeader = false;
       }
 
-      outs() << INDENT "- DependencyKind: " << _dependencyKindName(info.Kind) << "\n"
+      outs() << INDENT "- DependencyKind: " << _dependencyKindName(info.Kind)
+             << "\n"
              << INDENT "  IsSystem: " << info.IsSystem << "\n"
              << INDENT "  UnitOrRecordName: " << info.UnitOrRecordName << "\n"
              << INDENT "  FilePath: " << info.FilePath << "\n"
