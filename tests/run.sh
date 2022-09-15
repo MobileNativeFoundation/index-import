@@ -2,7 +2,9 @@
 
 set -euo pipefail
 
-readonly base_dir=$(dirname "$0")
+base_dir=$(dirname "$0")
+readonly index_import=../../build/index-import
+readonly absolute_unit=../../build/absolute-unit
 
 clang() {
     xcrun --sdk macosx clang -mmacosx-version-min=10.0.0 "$@"
@@ -19,13 +21,14 @@ rm -fr input output
 # Produce the index.
 clang -fsyntax-only -index-store-path input input.c
 
-../../build/index-import \
+"$index_import" \
   -remap input.c.o=output.c.o \
   -remap "$(pwd)"=/fake/working/dir \
   input output
 
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
-../../build/absolute-unit output/v5/units/* \
+"$absolute_unit" \
+  output/v5/units/* \
   | FileCheck expected.txt
 
 # Check that the expected index files exist.
@@ -49,13 +52,14 @@ rm -fr input output
 # Produce the index and delete the unneeded .o.
 xcrun swiftc -target "$(uname -m)-apple-macosx10.9.0" -index-store-path input -c input.swift && rm input.o
 
-../../build/index-import \
+"$index_import" \
   -remap input.o=output.o \
   -remap "$(pwd)"=/fake/working/dir \
   input output
 
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
-../../build/absolute-unit output/v5/units/output* output/v5/units/*.swiftinterface* \
+"$absolute_unit" \
+  output/v5/units/output* output/v5/units/*.swiftinterface* \
   | FileCheck expected.txt
 
 # Check that the expected index files exist.
@@ -80,14 +84,15 @@ rm -fr input1 input2 output
 clang -fsyntax-only -index-store-path input1 input1.c
 clang -fsyntax-only -index-store-path input2 input2.c
 
-../../build/index-import \
+"$index_import" \
   -parallel-stride 1 \
   -remap 'input(.).c.o=output$1.c.o' \
   -remap "$(pwd)"=/fake/working/dir \
   input1 input2 output
 
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
-../../build/absolute-unit output/v5/units/* \
+"$absolute_unit" \
+  output/v5/units/* \
   | FileCheck expected.txt
 
 # Check that the expected index files exist.
