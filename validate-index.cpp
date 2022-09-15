@@ -27,7 +27,8 @@ int main(int argc, char **argv) {
   PathRemapper clangPathRemapper;
 
   std::string storeError{};
-  auto store = IndexDataStore::create(IndexStore, clangPathRemapper, storeError);
+  auto store =
+      IndexDataStore::create(IndexStore, clangPathRemapper, storeError);
   if (not store) {
     errs() << "error: failed to open indexstore " << IndexStore << " -- "
            << storeError << "\n";
