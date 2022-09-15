@@ -75,6 +75,37 @@ popd >/dev/null
 
 ############################################################
 
+echo "Testing clang indexes with explicit unit output path"
+pushd "$base_dir"/clang >/dev/null
+
+# Clean any test state from previous runs.
+rm -fr input output
+
+# Produce the index.
+clang -fsyntax-only -index-store-path input input.c -index-unit-output-path /foo/input.c.o
+
+"$index_import" \
+  -remap '/foo/input.c.o=/fake/working/dir/output.c.o' \
+  -remap "$PWD=/fake/working/dir" \
+  input output
+
+# See https://llvm.org/docs/CommandGuide/FileCheck.html
+"$absolute_unit" \
+  output/v5/units/* \
+  | FileCheck expected.txt
+
+# Check that the expected index files exist.
+ls output/v5/units/output.c.o-1I92L511L7IRP >/dev/null
+ls output/v5/records/2F/input.c-50XRP2AC092F >/dev/null
+
+# Check that the record files are identical.
+diff -q -r {input,output}/v5/records/
+
+echo "clang index tests with explicit unit output path passed"
+popd >/dev/null
+
+############################################################
+
 echo "Testing swiftc indexes"
 pushd "$base_dir"/swiftc >/dev/null
 
@@ -102,6 +133,37 @@ ls output/v5/records/7Q/input.swift-17Z5ZBKNZQ27Q >/dev/null
 diff -q -r {input,output}/v5/records/
 
 echo "swiftc index tests passed"
+popd >/dev/null
+
+############################################################
+
+echo "Testing swiftc indexes explicit unit output path"
+pushd "$base_dir"/swiftc >/dev/null
+
+# Clean any test state from previous runs.
+rm -fr input output
+
+# Produce the index and delete the unneeded .o.
+xcrun swiftc -target "$(uname -m)-apple-macosx10.9.0" -index-store-path input -c input.swift -index-unit-output-path /foo/someoutput.o && rm input.o
+
+"$index_import" \
+  -remap '/foo/someoutput.o=output.o' \
+  -remap "$PWD=/fake/working/dir" \
+  input output
+
+# See https://llvm.org/docs/CommandGuide/FileCheck.html
+"$absolute_unit" \
+  output/v5/units/output* output/v5/units/*.swiftinterface* \
+  | FileCheck expected.txt
+
+# Check that the expected index files exist.
+ls output/v5/units/output.o-2WR4IG6X35AJB >/dev/null
+ls output/v5/records/7Q/input.swift-17Z5ZBKNZQ27Q >/dev/null
+
+# Check that the record files are identical.
+diff -q -r {input,output}/v5/records/
+
+echo "swiftc index tests explicit unit output path passed"
 popd >/dev/null
 
 ############################################################
