@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# shellcheck disable=SC2016
 set -euo pipefail
 
 base_dir=$(dirname "$0")
