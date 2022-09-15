@@ -10,7 +10,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        xcode: ["13.4", "14.0"]
+        xcode: ["13.4"]
 
     steps:
       - name: Switch Xcode
