@@ -1,8 +1,8 @@
 CHECK: ---
 CHECK: # output/v5/units/output.c.o-{{.+}}
 CHECK: WorkingDirectory: /fake/working/dir
-CHECK: MainFilePath:
-CHECK: OutputFile: output.c.o
+CHECK: MainFilePath: /fake/working/dir/input.c
+CHECK: OutputFile: /fake/working/dir/output.c.o
 CHECK: ModuleName:
 CHECK: IsSystemUnit: 0
 CHECK: IsModuleUnit: 0
@@ -15,5 +15,5 @@ CHECK: Dependencies:
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 0
 CHECK: 	UnitOrRecordName: input.c-50XRP2AC092F
-CHECK: 	FilePath: input.c
+CHECK: 	FilePath: /fake/working/dir/input.c
 CHECK: 	ModuleName:

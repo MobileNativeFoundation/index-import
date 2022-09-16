@@ -1,8 +1,8 @@
 CHECK: ---
 CHECK: # output/v5/units/output.o-{{.+}}
 CHECK: WorkingDirectory: /fake/working/dir
-CHECK: MainFilePath:
-CHECK: OutputFile: output.o
+CHECK: MainFilePath: /fake/working/dir/input.swift
+CHECK: OutputFile: /fake/working/dir/output.o
 CHECK: ModuleName: input
 CHECK: IsSystemUnit: 0
 CHECK: IsModuleUnit: 0

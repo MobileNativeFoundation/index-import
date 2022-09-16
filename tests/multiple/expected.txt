@@ -1,8 +1,8 @@
 CHECK: ---
 CHECK: # output/v5/units/output1.c.o-{{.+}}
 CHECK: WorkingDirectory: /fake/working/dir
-CHECK: MainFilePath:
-CHECK: OutputFile: output1.c.o
+CHECK: MainFilePath: /fake/working/dir/input1.c
+CHECK: OutputFile: /fake/working/dir/output1.c.o
 CHECK: ModuleName:
 CHECK: IsSystemUnit: 0
 CHECK: IsModuleUnit: 0
@@ -15,13 +15,13 @@ CHECK: Dependencies:
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 0
 CHECK: 	UnitOrRecordName: input1.c-H8E66JWPU5WU
-CHECK: 	FilePath: input1.c
+CHECK: 	FilePath: /fake/working/dir/input1.c
 CHECK: 	ModuleName:
 CHECK: ---
 CHECK: # output/v5/units/output2.c.o-{{.+}}
 CHECK: WorkingDirectory: /fake/working/dir
-CHECK: MainFilePath:
-CHECK: OutputFile: output2.c.o
+CHECK: MainFilePath: /fake/working/dir/input2.c
+CHECK: OutputFile: /fake/working/dir/output2.c.o
 CHECK: ModuleName:
 CHECK: IsSystemUnit: 0
 CHECK: IsModuleUnit: 0
@@ -34,5 +34,5 @@ CHECK: Dependencies:
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 0
 CHECK: 	UnitOrRecordName: input2.c-1UNY7PC9RPELF
-CHECK: 	FilePath: input2.c
+CHECK: 	FilePath: /fake/working/dir/input2.c
 CHECK: 	ModuleName:
