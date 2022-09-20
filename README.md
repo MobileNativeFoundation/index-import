@@ -4,7 +4,7 @@ A tool to import `swiftc` and `clang` generated indexes into Xcode.
 
 ## Overview
 
-The `index-import` tool makes indexes transportable. The ability to copy indexes into Xcode has a few possible uses:
+The `index-import` tool makes indexes portable. The ability to copy indexes into Xcode has a few possible uses:
 
 1. Using a separate build system (Bazel, Buck, CMake, SwiftPM, etc)
 2. Distributing a CI built index to developer machines
@@ -16,20 +16,9 @@ For Xcode to be able to use an index, the file paths contained in the index must
 
 Path remapping is done with regex substitution. `index-import` accepts one or more `-remap` flags which are formatted as `<regex>=<substitution>`. See the [examples](#examples) below. Path remapping is conceptually similar to `sed s/regex/substitution/`. In all cases, the substitution will either be a path within the project, or a path within `DerivedData`.
 
-### Index File Format
-
-The index consists of two types of files, Unit files and Record files. Both are [LLVM Bitstream](https://www.llvm.org/docs/BitCodeFormat.html#bitstream-format), a common binary format used by LLVM/Clang/Swift. Record files contain no paths and can be simply copied. Only Unit files contain paths, so only unit files need to be rewritten. A read/write API is available in the `clangIndex` library. `index-import` uses [`IndexUnitReader`](https://github.com/apple/llvm-project/blob/swift/release/5.5/clang/include/clang/Index/IndexUnitReader.h) and [`IndexUnitWriter`](https://github.com/apple/llvm-project/blob/swift/release/5.5/clang/include/clang/Index/IndexUnitWriter.h).
-
-## Resources
-
-The best information on the `swiftc` and `clang` index store comes from these two resources:
-
-* [Adding Index‐While‐Building and Refactoring to Clang](https://www.youtube.com/watch?v=jGJhnIT-D2M), 2017 LLVM Developers Meeting, by Alex Lorenz and Nathan Hawes
-* [Indexing While Building whitepaper](https://docs.google.com/document/d/1cH2sTpgSnJZCkZtJl1aY-rzy4uGPcrI-6RrUpdATO2Q/)
-
 ## Examples
 
-The simplest example is to consider the case of two checkouts of the same project. If one project has a built index, it can be imported into the other. To do this, two paths need to be remapped: the project directory and the build directory (`DerivedData`).
+The simplest example is to consider the case of two checkouts of the same project on the same machine. If one project has a built index, it can be imported into the other. To do this, two paths need to be remapped: the project directory and the build directory (`DerivedData`).
 
 ```sh
 #!/bin/bash
@@ -49,29 +38,36 @@ A more complex example is importing an index from a [Bazel](https://bazel.build)
 ```sh
 #!/bin/bash
 
-# ex: /private/var/tmp/_bazel_<username>/<hash>/execroot/<workspacename>
-bazel_root="^/private/var/tmp/_bazel_.+?/.+?/execroot/[^/]+"
-# ex: bazel-out/ios-x86_64-min11.0-applebin_ios-ios_x86_64-dbg/bin
-bazel_bin="^(?:$bazel_root/)?bazel-out/.+?/bin"
+set -euo pipefail
 
-# ex: $bazel_bin/<package>/<target>_objs/<source>.swift.o
-bazel_swift_object="$bazel_bin/.*/(.+?)_objs/.*/(.+?)\\.swift\\.o$"
-# ex: Build/Intermediates.noindex/<project>.build/Debug-iphonesimulator/<target>.build/Objects-normal/x86_64/<source>.o
-xcode_object="$CONFIGURATION_TEMP_DIR/\$1.build/Objects-normal/$ARCHS/\$2.o"
+# Input: /Users/me/Library/Developer/Xcode/DerivedData/PROJECT-abc/Build/Products
+# Output: /Users/me/Library/Developer/Xcode/DerivedData/PROJECT-abc
+derived_data_root=$(dirname "$(dirname "$BUILD_DIR")")
+readonly xcode_index_root="$derived_data_root/Index.noindex/DataStore"
 
-# ex: $bazel_bin/<package>/<module>.swiftmodule
-bazel_module="$bazel_bin/.*/(.+?)\\.swiftmodule$"
-# ex: Build/Products/Debug-iphonesimulator/<module>.swiftmodule/x86_64.swiftmodule
-xcode_module="$BUILT_PRODUCTS_DIR/\$1.swiftmodule/$ARCHS.swiftmodule"
+# Captures: 1) module name
+readonly bazel_swiftmodules="^/__build_bazel_rules_swift/swiftmodules/(.+).swiftmodule"
+readonly xcode_swiftmodules="$BUILT_PRODUCTS_DIR/\$1.swiftmodule/$ARCHS.swiftmodule"
 
-index-import \
-    -remap "$bazel_module=$xcode_module" \
-    -remap "$bazel_swift_object=$xcode_object" \
-    -remap "$bazel_root=$SRCROOT" \
-    "$SRCROOT/bazel-out/<config>/bin/<package>/<module>.indexstore" \
-    "$HOME/Library/Developer/Xcode/DerivedData/<project>/Index/DataStore"
+# Captures: 1) target name, 2) object name
+readonly bazel_objects="^\./bazel-out/.+?/bin/.*?(?:[^/]+)/([^/]+?)_objs(?:/.*)*/(.+?)\.swift\.o$"
+readonly xcode_objects="$CONFIGURATION_TEMP_DIR/\$1.build/Objects-normal/$ARCHS/\$2.o"
 
+index-import
+    -remap "$bazel_swiftmodules=$xcode_swiftmodules" \
+    -remap "$bazel_objects=$xcode_objects" \
+    -remap "^\.=$SRCROOT" \
+    -remap "DEVELOPER_DIR=$DEVELOPER_DIR" \
+    -incremental \
+    @"$index_stores_file" \
+    "$xcode_index_root"
 ```
+
+Since Xcode 14 / Swift 5.7, `clang` and `swiftc` support remapping paths
+in index data using `-ffile-prefix-map=foo=bar` and `-file-prefix-map
+foo=bar` respectively. Using this makes it easy to generate a
+reproducible index that can be transferred between machines, and then
+remapped to local only paths using one of the examples above.
 
 ## Build Instructions
 
@@ -108,3 +104,14 @@ Or, if you prefer Xcode for building and debugging, you can replace the last 2 l
 cmake -G Xcode -DCMAKE_BUILD_TYPE=Release ..
 open index-import.xcodeproj
 ```
+
+## Index File Format
+
+The index consists of two types of files, Unit files and Record files. Both are [LLVM Bitstream](https://www.llvm.org/docs/BitCodeFormat.html#bitstream-format), a common binary format used by LLVM/Clang/Swift. Record files contain no paths and can be simply copied. Only Unit files contain paths, so only unit files need to be rewritten. A read/write API is available in the `clangIndex` library. `index-import` uses [`IndexUnitReader`](https://github.com/apple/llvm-project/blob/swift/release/5.5/clang/include/clang/Index/IndexUnitReader.h) and [`IndexUnitWriter`](https://github.com/apple/llvm-project/blob/swift/release/5.5/clang/include/clang/Index/IndexUnitWriter.h).
+
+## Resources
+
+The best information on the `swiftc` and `clang` index store comes from these two resources:
+
+* [Adding Index‐While‐Building and Refactoring to Clang](https://www.youtube.com/watch?v=jGJhnIT-D2M), 2017 LLVM Developers Meeting, by Alex Lorenz and Nathan Hawes
+* [Indexing While Building whitepaper](https://docs.google.com/document/d/1cH2sTpgSnJZCkZtJl1aY-rzy4uGPcrI-6RrUpdATO2Q/)
