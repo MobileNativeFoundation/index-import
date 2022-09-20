@@ -13,6 +13,34 @@ clang() {
 
 ############################################################
 
+echo "Testing import only"
+pushd "$base_dir"/import_only >/dev/null
+
+# Clean any test state from previous runs.
+rm -fr input output
+
+# Produce the index.
+clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
+
+"$index_import" input output
+
+# See https://llvm.org/docs/CommandGuide/FileCheck.html
+"$absolute_unit" \
+  output/v5/units/* \
+  | FileCheck "-DPWD=$PWD" expected.txt
+
+# Check that the expected index files exist.
+ls output/v5/units/input.c.o-* >/dev/null
+ls output/v5/records/2F/input.c-50XRP2AC092F >/dev/null
+
+# Check that the record files are identical.
+diff -q -r {input,output}/v5/records/
+
+echo "import only tests passed"
+popd >/dev/null
+
+############################################################
+
 echo "Testing clang indexes"
 pushd "$base_dir"/clang >/dev/null
 

@@ -68,12 +68,14 @@ public:
         // The format() function takes no explicit arguments, instead it gets
         // the values from the match object.
         auto substitution = match.format(replacement);
-        return match.prefix().str() + substitution + match.suffix().str();
+        auto output_str =
+            match.prefix().str() + substitution + match.suffix().str();
+        return path::remove_leading_dotslash(StringRef(output_str)).str();
       }
     }
 
     // No patterns matched, return the input unaltered.
-    return input_str;
+    return path::remove_leading_dotslash(input).str();
   }
 
   void addRemap(const std::regex &pattern, const std::string &replacement) {
@@ -257,7 +259,12 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
   auto sysrootPath = remapper.remap(reader->getSysrootPath());
 
   auto &fsOpts = fileMgr.getFileSystemOpts();
-  fsOpts.WorkingDir = workingDir;
+  if (workingDir != ".") {
+    // IndexUnitWriter has special logic for empty working directories meaning
+    // the current working directory. IndexUnitWriter also always makes paths
+    // absolute, so not doing this results in an odd "." in the path.
+    fsOpts.WorkingDir = workingDir;
+  }
 
   auto writer = IndexUnitWriter(
       fileMgr, OutputIndexPath, reader->getProviderIdentifier(),
