@@ -424,8 +424,8 @@ static bool remapIndex(const Remapper &remapper,
     auto reader = IndexUnitReader::createWithFilePath(
         unitPath, clangPathRemapper, unitReadError);
     if (not reader) {
-      errs() << "error: failed to read unit file " << unitPath << "\n"
-             << unitReadError;
+      errs() << "error: failed to read unit file " << unitPath << " -- "
+             << unitReadError << "\n";
       success = false;
       return;
     }
