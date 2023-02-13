@@ -37,6 +37,9 @@ static cl::list<std::string> RemapFilePaths("import-output-file",
 static cl::opt<std::string> OutputIndexPath(cl::Positional, cl::Required,
                                             cl::desc("<output-indexstore>"));
 
+static cl::list<std::string> FilePrefixMaps("file-prefix-map",
+                                            cl::desc("file-prefix-map="));
+
 static cl::opt<unsigned> ParallelStride(
     "parallel-stride", cl::init(32),
     cl::desc(
@@ -122,6 +125,7 @@ static const FileEntry *getFileEntry(FileManager &fileMgr, StringRef path) {
 
 void getUnitPathForOutputFile(StringRef unitsPath, StringRef filePath,
                               SmallVectorImpl<char> &str,
+                              const PathRemapper &clangPathRemapper,
                               FileManager &fileMgr) {
   str.append(unitsPath.begin(), unitsPath.end());
   str.push_back('/');
@@ -130,6 +134,7 @@ void getUnitPathForOutputFile(StringRef unitsPath, StringRef filePath,
   StringRef fname = sys::path::filename(absPath);
   str.append(fname.begin(), fname.end());
   str.push_back('-');
+  clangPathRemapper.remapPath(absPath);
   llvm::hash_code pathHashVal = llvm::hash_value(absPath);
   llvm::APInt(64, pathHashVal).toString(str, 36, /*Signed=*/false);
 }
@@ -137,9 +142,11 @@ void getUnitPathForOutputFile(StringRef unitsPath, StringRef filePath,
 Optional<bool>
 isUnitUpToDateForOutputFile(StringRef unitsPath, StringRef filePath,
                             Optional<StringRef> timeCompareFilePath,
+                            const PathRemapper &clangPathRemapper,
                             FileManager &fileMgr, std::string &error) {
   SmallString<256> unitPath;
-  getUnitPathForOutputFile(unitsPath, filePath, unitPath, fileMgr);
+  getUnitPathForOutputFile(unitsPath, filePath, unitPath, clangPathRemapper,
+                           fileMgr);
 
   llvm::sys::fs::file_status unitStat;
   if (std::error_code ec = llvm::sys::fs::status(unitPath.c_str(), unitStat)) {
@@ -175,10 +182,12 @@ isUnitUpToDateForOutputFile(StringRef unitsPath, StringRef filePath,
 // Returns true if the Unit file of given output file already exists and is
 // older than the input file.
 static bool isUnitUpToDate(StringRef unitsPath, StringRef outputFile,
-                           StringRef inputFile, FileManager &fileMgr) {
+                           StringRef inputFile,
+                           const PathRemapper &clangPathRemapper,
+                           FileManager &fileMgr) {
   std::string error;
-  auto isUpToDateOpt = isUnitUpToDateForOutputFile(unitsPath, outputFile,
-                                                   inputFile, fileMgr, error);
+  auto isUpToDateOpt = isUnitUpToDateForOutputFile(
+      unitsPath, outputFile, inputFile, clangPathRemapper, fileMgr, error);
   if (!isUpToDateOpt.hasValue()) {
     errs() << "error: failed file status check:\n" << error << "\n";
     return false;
@@ -250,7 +259,7 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
       remappedOutputFilePath = outputFile;
     }
     if (isUnitUpToDate(outputUnitsPath, remappedOutputFilePath, inputUnitPath,
-                       fileMgr)) {
+                       clangPathRemapper, fileMgr)) {
       return None;
     }
   }
@@ -450,7 +459,7 @@ static bool remapIndex(const Remapper &remapper,
     for (auto &path : RemapFilePaths) {
       SmallString<256> outPath;
       getUnitPathForOutputFile(unitDirectory, normalizePath(path), outPath,
-                               fileMgr);
+                               clangPathRemapper, fileMgr);
       handleUnitPath(outPath.c_str(), outputRecordsDirectory);
     }
     return success;
@@ -488,6 +497,16 @@ int main(int argc, char **argv) {
   OutputIndexPath = normalizePath(OutputIndexPath);
 
   PathRemapper clangPathRemapper;
+  for (const auto &clangPathMapping : FilePrefixMaps) {
+    llvm::StringRef mappingRef(clangPathMapping);
+    if (!mappingRef.contains('=')) {
+      errs() << "error: prefix map argument should be of form prefix=value,"
+             << " but got: " << mappingRef << "\n";
+      return EXIT_FAILURE;
+    }
+    auto split = mappingRef.split('=');
+    clangPathRemapper.addMapping(split.first, split.second);
+  }
 
   Remapper remapper;
   // Parse the the path remapping command line flags. This converts strings of

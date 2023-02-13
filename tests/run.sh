@@ -41,6 +41,67 @@ popd >/dev/null
 
 ############################################################
 
+echo "Testing import-output-file"
+pushd "$base_dir"/import_only >/dev/null
+
+# Clean any test state from previous runs.
+rm -fr input output
+
+# Produce the index.
+clang -fsyntax-only -index-store-path input input.c
+
+"$index_import" \
+  -import-output-file input.c.o \
+  input output
+
+# See https://llvm.org/docs/CommandGuide/FileCheck.html
+"$absolute_unit" \
+  output/v5/units/input.c.o-* \
+  | FileCheck "-DPWD=$PWD" expected.txt
+
+# Check that the expected index files exist.
+ls output/v5/units/input.c.o-* >/dev/null
+ls output/v5/records/2F/input.c-50XRP2AC092F >/dev/null
+
+# Check that the record files are identical.
+diff -q -r {input,output}/v5/records/
+
+echo "import-output-file tests passed"
+popd >/dev/null
+
+############################################################
+
+echo "Testing import-output-file with -file-prefix-map"
+pushd "$base_dir"/import_only >/dev/null
+
+# Clean any test state from previous runs.
+rm -fr input output
+
+# Produce the index.
+clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
+
+"$index_import" \
+  -import-output-file input.c.o \
+  -file-prefix-map "$PWD=." \
+  input output
+
+# See https://llvm.org/docs/CommandGuide/FileCheck.html
+"$absolute_unit" \
+  output/v5/units/input.c.o-* \
+  | FileCheck "-DPWD=." expected.txt
+
+# Check that the expected index files exist.
+ls output/v5/units/input.c.o-* >/dev/null
+ls output/v5/records/2F/input.c-50XRP2AC092F >/dev/null
+
+# Check that the record files are identical.
+diff -q -r {input,output}/v5/records/
+
+echo "import-output-file with -file-prefix-map tests passed"
+popd >/dev/null
+
+############################################################
+
 echo "Testing clang indexes"
 pushd "$base_dir"/clang >/dev/null
 
