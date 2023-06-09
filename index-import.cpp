@@ -139,9 +139,9 @@ void getUnitPathForOutputFile(StringRef unitsPath, StringRef filePath,
   llvm::APInt(64, pathHashVal).toString(str, 36, /*Signed=*/false);
 }
 
-Optional<bool>
+std::optional<bool>
 isUnitUpToDateForOutputFile(StringRef unitsPath, StringRef filePath,
-                            Optional<StringRef> timeCompareFilePath,
+                            std::optional<StringRef> timeCompareFilePath,
                             const PathRemapper &clangPathRemapper,
                             FileManager &fileMgr, std::string &error) {
   SmallString<256> unitPath;
@@ -153,12 +153,12 @@ isUnitUpToDateForOutputFile(StringRef unitsPath, StringRef filePath,
     if (ec != llvm::errc::no_such_file_or_directory) {
       llvm::raw_string_ostream err(error);
       err << "could not access path '" << unitPath << "': " << ec.message();
-      return None;
+      return std::nullopt;
     }
     return false;
   }
 
-  if (!timeCompareFilePath.hasValue())
+  if (!timeCompareFilePath.has_value())
     return true;
 
   llvm::sys::fs::file_status compareStat;
@@ -168,7 +168,7 @@ isUnitUpToDateForOutputFile(StringRef unitsPath, StringRef filePath,
       llvm::raw_string_ostream err(error);
       err << "could not access path '" << *timeCompareFilePath
           << "': " << ec.message();
-      return None;
+      return std::nullopt;
     }
     return true;
   }
@@ -188,7 +188,7 @@ static bool isUnitUpToDate(StringRef unitsPath, StringRef outputFile,
   std::string error;
   auto isUpToDateOpt = isUnitUpToDateForOutputFile(
       unitsPath, outputFile, inputFile, clangPathRemapper, fileMgr, error);
-  if (!isUpToDateOpt.hasValue()) {
+  if (!isUpToDateOpt.has_value()) {
     errs() << "error: failed file status check:\n" << error << "\n";
     return false;
   }
@@ -225,7 +225,7 @@ static bool cloneRecord(StringRef from, StringRef to) {
 }
 
 // Returns None if the Unit file is already up to date
-static Optional<IndexUnitWriter>
+static std::optional<IndexUnitWriter>
 importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
            StringRef outputRecordsPath, StringRef inputRecordsPath,
            const std::unique_ptr<IndexUnitReader> &reader,
@@ -260,7 +260,7 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
     }
     if (isUnitUpToDate(outputUnitsPath, remappedOutputFilePath, inputUnitPath,
                        clangPathRemapper, fileMgr)) {
-      return None;
+      return std::nullopt;
     }
   }
 
@@ -444,7 +444,7 @@ static bool remapIndex(const Remapper &remapper,
                              recordsDirectory, reader, remapper,
                              clangPathRemapper, fileMgr, moduleNames);
 
-    if (writer.hasValue()) {
+    if (writer.has_value()) {
       std::string unitWriteError;
       if (writer->write(unitWriteError)) {
         errs() << "error: failed to write index store; " << unitWriteError
