@@ -9,11 +9,11 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdlib>
-#include <regex>
 #include <set>
 #include <string>
 #include <vector>
 
+#include <boost/regex.hpp>
 #include <copyfile.h>
 
 #include <dispatch/dispatch.h>
@@ -61,18 +61,19 @@ public:
   std::string remap(const llvm::StringRef input) const {
     std::string input_str = input.str();
     for (const auto &remap : this->_remaps) {
-      const auto &pattern = std::get<std::regex>(remap);
+      const auto &pattern = std::get<boost::regex>(remap);
       const auto &replacement = std::get<std::string>(remap);
 
-      std::smatch match;
-      if (std::regex_search(input_str, match, pattern)) {
+      std::string output_str =
+          boost::regex_replace(input_str, pattern, replacement);
+      if (output_str != input_str) {
         // I haven't seen this design in other regex APIs, and is worth some
         // explanation. The replacement string is conceptually a format string.
         // The format() function takes no explicit arguments, instead it gets
         // the values from the match object.
-        auto substitution = match.format(replacement);
-        auto output_str =
-            match.prefix().str() + substitution + match.suffix().str();
+        // auto substitution = match.format(replacement);
+        // auto output_str =
+        //     match.prefix().str() + substitution + match.suffix().str();
         return path::remove_leading_dotslash(StringRef(output_str)).str();
       }
     }
@@ -81,11 +82,11 @@ public:
     return path::remove_leading_dotslash(input).str();
   }
 
-  void addRemap(const std::regex &pattern, const std::string &replacement) {
+  void addRemap(const boost::regex &pattern, const std::string &replacement) {
     this->_remaps.emplace_back(pattern, replacement);
   }
 
-  std::vector<std::pair<std::regex, std::string>> _remaps;
+  std::vector<std::pair<boost::regex, std::string>> _remaps;
 };
 
 // Helper for working with index::writer::OpaqueModule. Provides the following:
@@ -537,10 +538,10 @@ int main(int argc, char **argv) {
     auto divider = remap.find('=');
     auto pattern = remap.substr(0, divider);
     try {
-      std::regex re(pattern);
+      boost::regex re(pattern);
       auto replacement = remap.substr(divider + 1);
       remapper.addRemap(re, replacement);
-    } catch (const std::regex_error &e) {
+    } catch (const boost::regex_error &e) {
       errs() << "Error parsing regular expression: '" << pattern << "':\n"
              << e.what() << "\n";
       errors++;

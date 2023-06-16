@@ -5,6 +5,13 @@ if(COMMAND project)
   project(index-import)
 endif()
 
+include(FetchContent)
+FetchContent_Declare(
+    Boost
+    URL https://github.com/boostorg/boost/releases/download/boost-1.82.0/boost-1.82.0.tar.xz
+)
+FetchContent_MakeAvailable(Boost)
+
 find_package(Clang CONFIG REQUIRED)
 
 function(add_index_executable execname)
@@ -16,7 +23,7 @@ function(add_index_executable execname)
   if(NOT LLVM_ENABLE_RTTI)
     target_compile_options("${execname}" PRIVATE -fno-rtti)
   endif()
-  target_link_libraries("${execname}" PRIVATE clangIndexDataStore)
+  target_link_libraries("${execname}" PRIVATE clangIndexDataStore Boost::regex)
   target_link_options("${execname}" PRIVATE -dead_strip)
 endfunction()
 
