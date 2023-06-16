@@ -3,6 +3,8 @@
 /absolute-unit
 /armbuild/
 /build/
+/build-release/
+/build-release-dbg/
 /compile_commands.json
 /index-import
 /intelbuild/
