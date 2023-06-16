@@ -425,10 +425,9 @@ static bool remapIndex(const Remapper &remapper,
   }
 
   bool success = true;
-  FileSystemOptions fsOpts;
-  FileManager fileMgr{fsOpts};
 
-  auto handleUnitPath = [&](StringRef unitPath, StringRef outputRecordsPath_) {
+  auto handleUnitPath = [&](StringRef unitPath, StringRef outputRecordsPath_,
+                            FileManager &fileManager) {
     std::string unitReadError;
     auto reader = IndexUnitReader::createWithFilePath(
         unitPath, clangPathRemapper, unitReadError);
@@ -442,7 +441,7 @@ static bool remapIndex(const Remapper &remapper,
     ModuleNameScope moduleNames;
     auto writer = importUnit(outputUnitDirectory, unitPath, outputRecordsPath_,
                              recordsDirectory, reader, remapper,
-                             clangPathRemapper, fileMgr, moduleNames);
+                             clangPathRemapper, fileManager, moduleNames);
 
     if (writer.has_value()) {
       std::string unitWriteError;
@@ -456,11 +455,13 @@ static bool remapIndex(const Remapper &remapper,
 
   // Map over the file paths that the user provided
   if (RemapFilePaths.size()) {
+    FileSystemOptions fsOpts;
+    FileManager fileMgr{fsOpts};
     for (auto &path : RemapFilePaths) {
       SmallString<256> outPath;
       getUnitPathForOutputFile(unitDirectory, normalizePath(path), outPath,
                                clangPathRemapper, fileMgr);
-      handleUnitPath(outPath.c_str(), outputRecordsDirectory);
+      handleUnitPath(outPath.c_str(), outputRecordsDirectory, fileMgr);
     }
     return success;
   }
@@ -477,10 +478,13 @@ static bool remapIndex(const Remapper &remapper,
   std::error_code dirError;
   fs::directory_iterator dir{unitDirectory, dirError};
   fs::directory_iterator end;
+  std::vector<std::string> unitPaths;
+
+  // collect all unit paths
   while (dir != end && !dirError) {
     const auto unitPath = dir->path();
     dir.increment(dirError);
-    handleUnitPath(unitPath, "");
+    unitPaths.push_back(unitPath);
   }
 
   if (dirError) {
@@ -488,6 +492,22 @@ static bool remapIndex(const Remapper &remapper,
            << dirError.message() << "\n";
     success = false;
   }
+
+  const size_t length = unitPaths.size();
+  const size_t stride = (ParallelStride != 0) ? ParallelStride : length;
+  const size_t numStrides = ((length - 1) / stride) + 1;
+
+  dispatch_apply(numStrides, DISPATCH_APPLY_AUTO, ^(size_t strideIndex) {
+    const size_t start = strideIndex * stride;
+    const size_t end = std::min(start + stride, length);
+    std::vector<std::string> pathsToHandle(unitPaths.begin() + start,
+                                           unitPaths.begin() + end);
+    FileSystemOptions fsOpts;
+    FileManager fileMgr{fsOpts};
+    for (const auto &pathToHandle : pathsToHandle) {
+      handleUnitPath(pathToHandle, "", fileMgr);
+    }
+  });
   return success;
 }
 
