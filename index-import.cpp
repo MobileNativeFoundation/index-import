@@ -59,18 +59,33 @@ static cl::opt<bool> UndoRulesSwiftRenames(
 
 struct Remapper {
 public:
+  explicit Remapper() { llvm::sys::fs::current_path(this->pwd); }
+
   std::string remap(const llvm::StringRef input) const {
+    if (input.empty()) {
+      return input.str();
+    }
+
     std::string input_str = input.str();
+    std::optional<StringRef> output_str = std::nullopt;
     for (const auto &remap : this->_remaps) {
       const auto &pattern = remap.first;
       const auto &replacement = remap.second;
       if (re2::RE2::Replace(&input_str, *pattern, replacement)) {
-        return path::remove_leading_dotslash(StringRef(input_str)).str();
+        output_str = path::remove_leading_dotslash(StringRef(input_str));
+        break;
       }
     }
 
-    // No patterns matched, return the input unaltered.
-    return path::remove_leading_dotslash(input).str();
+    StringRef out = output_str.value_or(path::remove_leading_dotslash(input));
+    if (path::is_absolute(out)) {
+      return out.str();
+    }
+
+    SmallString<128> abs(out);
+    llvm::sys::fs::make_absolute(this->pwd, abs);
+    llvm::outs() << "resulting path is " << abs << "\n";
+    return abs.str().str();
   }
 
   void addRemap(std::shared_ptr<re2::RE2> &pattern,
@@ -79,6 +94,9 @@ public:
   }
 
   std::vector<std::pair<std::shared_ptr<re2::RE2>, std::string>> _remaps;
+
+private:
+  SmallString<128> pwd;
 };
 
 // Helper for working with index::writer::OpaqueModule. Provides the following:
