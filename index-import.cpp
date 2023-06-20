@@ -17,6 +17,7 @@
 #include <copyfile.h>
 
 #include <dispatch/dispatch.h>
+#include <re2/re2.h>
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -61,19 +62,10 @@ public:
   std::string remap(const llvm::StringRef input) const {
     std::string input_str = input.str();
     for (const auto &remap : this->_remaps) {
-      const auto &pattern = std::get<std::regex>(remap);
-      const auto &replacement = std::get<std::string>(remap);
-
-      std::smatch match;
-      if (std::regex_search(input_str, match, pattern)) {
-        // I haven't seen this design in other regex APIs, and is worth some
-        // explanation. The replacement string is conceptually a format string.
-        // The format() function takes no explicit arguments, instead it gets
-        // the values from the match object.
-        auto substitution = match.format(replacement);
-        auto output_str =
-            match.prefix().str() + substitution + match.suffix().str();
-        return path::remove_leading_dotslash(StringRef(output_str)).str();
+      const auto &pattern = remap.first;
+      const auto &replacement = remap.second;
+      if (re2::RE2::Replace(&input_str, *pattern, replacement)) {
+        return path::remove_leading_dotslash(StringRef(input_str)).str();
       }
     }
 
@@ -81,11 +73,12 @@ public:
     return path::remove_leading_dotslash(input).str();
   }
 
-  void addRemap(const std::regex &pattern, const std::string &replacement) {
+  void addRemap(std::shared_ptr<re2::RE2> &pattern,
+                const std::string &replacement) {
     this->_remaps.emplace_back(pattern, replacement);
   }
 
-  std::vector<std::pair<std::regex, std::string>> _remaps;
+  std::vector<std::pair<std::shared_ptr<re2::RE2>, std::string>> _remaps;
 };
 
 // Helper for working with index::writer::OpaqueModule. Provides the following:
@@ -536,15 +529,20 @@ int main(int argc, char **argv) {
   for (const auto &remap : PathRemaps) {
     auto divider = remap.find('=');
     auto pattern = remap.substr(0, divider);
-    try {
-      std::regex re(pattern);
-      auto replacement = remap.substr(divider + 1);
-      remapper.addRemap(re, replacement);
-    } catch (const std::regex_error &e) {
-      errs() << "Error parsing regular expression: '" << pattern << "':\n"
-             << e.what() << "\n";
+    std::shared_ptr<re2::RE2> re = std::make_shared<re2::RE2>(pattern);
+    auto replacement = remap.substr(divider + 1);
+    // re2 uses backslashes instead of dollar signs for regex replacements.
+    // This keeps API compat for users.
+    re2::RE2::GlobalReplace(&replacement, R"(\$(\d+))", R"(\\\1)");
+    std::string error;
+    if (!re->CheckRewriteString(replacement, &error)) {
+      errs() << "error: invalid replacement string '" << replacement
+             << "' for pattern '" << pattern << "': " << error << "\n";
       errors++;
+      continue;
     }
+
+    remapper.addRemap(re, replacement);
   }
 
   if (errors) {
