@@ -67,23 +67,23 @@ public:
     }
 
     std::string input_str = input.str();
-    std::optional<StringRef> output_str = std::nullopt;
+    std::optional<StringRef> remapped_str = std::nullopt;
     for (const auto &remap : this->_remaps) {
       const auto &pattern = remap.first;
       const auto &replacement = remap.second;
       if (re2::RE2::Replace(&input_str, *pattern, replacement)) {
-        output_str = path::remove_leading_dotslash(StringRef(input_str));
+        remapped_str = path::remove_leading_dotslash(StringRef(input_str));
         break;
       }
     }
 
-    StringRef remapped_str =
-        output_str.value_or(path::remove_leading_dotslash(input));
-    if (path::is_absolute(remapped_str)) {
-      return remapped_str.str();
+    StringRef output_str =
+        remapped_str.value_or(path::remove_leading_dotslash(input));
+    if (path::is_absolute(output_str)) {
+      return output_str.str();
     }
 
-    SmallString<128> absolute(remapped_str);
+    SmallString<128> absolute(output_str);
     llvm::sys::fs::make_absolute(this->pwd, absolute);
     return absolute.str().str();
   }
