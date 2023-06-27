@@ -84,7 +84,6 @@ public:
 
     SmallString<128> abs(out);
     llvm::sys::fs::make_absolute(this->pwd, abs);
-    llvm::outs() << "resulting path is " << abs << "\n";
     return abs.str().str();
   }
 
