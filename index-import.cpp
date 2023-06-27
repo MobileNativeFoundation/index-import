@@ -77,14 +77,15 @@ public:
       }
     }
 
-    StringRef out = output_str.value_or(path::remove_leading_dotslash(input));
-    if (path::is_absolute(out)) {
-      return out.str();
+    StringRef remapped_str =
+        output_str.value_or(path::remove_leading_dotslash(input));
+    if (path::is_absolute(remapped_str)) {
+      return remapped_str.str();
     }
 
-    SmallString<128> abs(out);
-    llvm::sys::fs::make_absolute(this->pwd, abs);
-    return abs.str().str();
+    SmallString<128> absolute(remapped_str);
+    llvm::sys::fs::make_absolute(this->pwd, absolute);
+    return absolute.str().str();
   }
 
   void addRemap(std::shared_ptr<re2::RE2> &pattern,
