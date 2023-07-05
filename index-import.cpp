@@ -85,6 +85,7 @@ public:
 
     SmallString<128> absolute(output_str);
     llvm::sys::fs::make_absolute(this->pwd, absolute);
+    llvm::sys::fs::real_path(absolute, absolute);
     return absolute.str().str();
   }
 
