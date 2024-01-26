@@ -40,4 +40,5 @@ endfunction()
 
 add_index_executable(index-import)
 add_index_executable(absolute-unit)
+add_index_executable(dump-record)
 add_index_executable(validate-index)
