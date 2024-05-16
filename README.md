@@ -75,7 +75,7 @@ The build uses [CMake](https://cmake.org) because [Apple's LLVM fork](https://gi
 
 When building Swift, keep the following in mind:
 
-1. Checkout the desired release branch of Swift using something like `./swift/utils/update-checkout --clone --scheme release/5.5`.
+1. Checkout the desired release branch of Swift using something like `./swift/utils/update-checkout --clone --scheme release/5.7`.
 2. Build Swift using `--release`/`-R` for performance
 
 Building all of Swift can take a long time, and most of that isn't needed by `index-import`. A faster way to build `index-import`, is to build only `libIndexStore.dylib`. Here are the commands to do just that:
@@ -107,7 +107,7 @@ open index-import.xcodeproj
 
 ## Index File Format
 
-The index consists of two types of files, Unit files and Record files. Both are [LLVM Bitstream](https://www.llvm.org/docs/BitCodeFormat.html#bitstream-format), a common binary format used by LLVM/Clang/Swift. Record files contain no paths and can be simply copied. Only Unit files contain paths, so only unit files need to be rewritten. A read/write API is available in the `clangIndex` library. `index-import` uses [`IndexUnitReader`](https://github.com/apple/llvm-project/blob/swift/release/5.5/clang/include/clang/Index/IndexUnitReader.h) and [`IndexUnitWriter`](https://github.com/apple/llvm-project/blob/swift/release/5.5/clang/include/clang/Index/IndexUnitWriter.h).
+The index consists of two types of files, Unit files and Record files. Both are [LLVM Bitstream](https://www.llvm.org/docs/BitCodeFormat.html#bitstream-format), a common binary format used by LLVM/Clang/Swift. Record files contain no paths and can be simply copied. Only Unit files contain paths, so only unit files need to be rewritten. A read/write API is available in the `clangIndex` library. `index-import` uses [`IndexUnitReader`](https://github.com/apple/llvm-project/blob/swift/release/5.7/clang/include/clang/Index/IndexUnitReader.h) and [`IndexUnitWriter`](https://github.com/apple/llvm-project/blob/swift/release/5.7/clang/include/clang/Index/IndexUnitWriter.h).
 
 ## Resources
 
