@@ -14,8 +14,6 @@
 #include <string>
 #include <vector>
 
-#include <copyfile.h>
-
 #include <dispatch/dispatch.h>
 #include <re2/re2.h>
 
@@ -208,13 +206,11 @@ static bool cloneRecord(StringRef from, StringRef to) {
     return true;
   }
 
-  // With swift-5.1, fs::copy_file supports cloning. Until then, use copyfile.
-  int failed =
-      copyfile(from.str().c_str(), to.str().c_str(), nullptr, COPYFILE_CLONE);
+  std::error_code failed = fs::copy_file(from, to);
 
   // In parallel mode we might be racing against other threads trying to create
   // the same record. To handle this, just silently drop file exists errors.
-  return (failed == 0 || errno == EEXIST);
+  return (!failed || errno == EEXIST);
 }
 
 // Returns None if the Unit file is already up to date
