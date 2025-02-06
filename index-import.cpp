@@ -7,6 +7,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/xxhash.h"
 
 #include <cstdlib>
 #include <regex>
@@ -105,13 +106,12 @@ private:
 };
 
 // Returns a FileEntry for any non-empty path.
-static const FileEntry *getFileEntry(FileManager &fileMgr, StringRef path) {
+static OptionalFileEntryRef getFileEntry(FileManager &fileMgr, StringRef path) {
   if (path.empty()) {
-    return nullptr;
+      return std::nullopt;
   }
-
   // Use getVirtualFile to handle both valid and invalid paths.
-  return fileMgr.getVirtualFile(path, /*size*/ 0, /*modtime*/ 0);
+  return fileMgr.getVirtualFileRef(path, /*size*/ 0, /*modtime*/ 0);
 }
 
 void getUnitPathForOutputFile(StringRef unitsPath, StringRef filePath,
@@ -126,8 +126,8 @@ void getUnitPathForOutputFile(StringRef unitsPath, StringRef filePath,
   str.append(fname.begin(), fname.end());
   str.push_back('-');
   clangPathRemapper.remapPath(absPath);
-  llvm::hash_code pathHashVal = llvm::hash_value(absPath);
-  llvm::APInt(64, pathHashVal).toString(str, 36, /*Signed=*/false);
+  auto PathHashVal = llvm::xxh3_64bits(absPath);
+  llvm::APInt(64, PathHashVal).toStringUnsigned(str, /*Radix*/ 36);
 }
 
 std::optional<bool>
@@ -331,8 +331,11 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
     const auto targetPath = remapper.remap(info.TargetPath);
 
     // Note this isn't relevant to Swift.
-    writer.addInclude(getFileEntry(fileMgr, sourcePath), info.SourceLine,
-                      getFileEntry(fileMgr, targetPath));
+    OptionalFileEntryRef sourcePathRef = getFileEntry(fileMgr, sourcePath);
+    const clang::FileEntry * sourcePathFile = sourcePathRef ? &sourcePathRef->getFileEntry() : nullptr;
+    OptionalFileEntryRef targetPathRef = getFileEntry(fileMgr, targetPath);
+    const clang::FileEntry * targetPathFile = sourcePathRef ? &targetPathRef->getFileEntry() : nullptr;
+    writer.addInclude(sourcePathFile, info.SourceLine, targetPathFile);
     return true;
   });
 
