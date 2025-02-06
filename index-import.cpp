@@ -106,12 +106,17 @@ private:
 };
 
 // Returns a FileEntry for any non-empty path.
-static OptionalFileEntryRef getFileEntry(FileManager &fileMgr, StringRef path) {
+static OptionalFileEntryRef getFileEntryRef(FileManager &fileMgr, StringRef path) {
   if (path.empty()) {
     return std::nullopt;
   }
   // Use getVirtualFile to handle both valid and invalid paths.
   return fileMgr.getVirtualFileRef(path, /*size*/ 0, /*modtime*/ 0);
+}
+
+static const FileEntry *getFileEntry(FileManager &fileMgr, StringRef path) {
+  auto ref = getFileEntryRef(fileMgr, path);
+  return ref ? &ref->getFileEntry() : nullptr;
 }
 
 void getUnitPathForOutputFile(StringRef unitsPath, StringRef filePath,
@@ -267,7 +272,7 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
   auto writer = IndexUnitWriter(
       fileMgr, OutputIndexPath, reader->getProviderIdentifier(),
       reader->getProviderVersion(), outputFile, reader->getModuleName(),
-      getFileEntry(fileMgr, mainFilePath), reader->isSystemUnit(),
+      getFileEntryRef(fileMgr, mainFilePath), reader->isSystemUnit(),
       reader->isModuleUnit(), reader->isDebugCompilation(), reader->getTarget(),
       sysrootPath, clangPathRemapper, moduleNames.getModuleInfo);
 
@@ -282,7 +287,7 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
     const auto isSystem = info.IsSystem;
 
     const auto filePath = remapper.remap(info.FilePath);
-    const auto file = getFileEntry(fileMgr, filePath);
+    const auto file = getFileEntryRef(fileMgr, filePath);
 
     switch (info.Kind) {
     case IndexUnitReader::DependencyKind::Unit: {
@@ -331,13 +336,8 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
     const auto targetPath = remapper.remap(info.TargetPath);
 
     // Note this isn't relevant to Swift.
-    OptionalFileEntryRef sourcePathRef = getFileEntry(fileMgr, sourcePath);
-    const clang::FileEntry *sourcePathFile =
-        sourcePathRef ? &sourcePathRef->getFileEntry() : nullptr;
-    OptionalFileEntryRef targetPathRef = getFileEntry(fileMgr, targetPath);
-    const clang::FileEntry *targetPathFile =
-        sourcePathRef ? &targetPathRef->getFileEntry() : nullptr;
-    writer.addInclude(sourcePathFile, info.SourceLine, targetPathFile);
+    writer.addInclude(getFileEntry(fileMgr, sourcePath), info.SourceLine,
+                      getFileEntry(fileMgr, targetPath));
     return true;
   });
 
