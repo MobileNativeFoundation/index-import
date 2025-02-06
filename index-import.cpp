@@ -108,7 +108,7 @@ private:
 // Returns a FileEntry for any non-empty path.
 static OptionalFileEntryRef getFileEntry(FileManager &fileMgr, StringRef path) {
   if (path.empty()) {
-      return std::nullopt;
+    return std::nullopt;
   }
   // Use getVirtualFile to handle both valid and invalid paths.
   return fileMgr.getVirtualFileRef(path, /*size*/ 0, /*modtime*/ 0);
@@ -332,9 +332,11 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
 
     // Note this isn't relevant to Swift.
     OptionalFileEntryRef sourcePathRef = getFileEntry(fileMgr, sourcePath);
-    const clang::FileEntry * sourcePathFile = sourcePathRef ? &sourcePathRef->getFileEntry() : nullptr;
+    const clang::FileEntry *sourcePathFile =
+        sourcePathRef ? &sourcePathRef->getFileEntry() : nullptr;
     OptionalFileEntryRef targetPathRef = getFileEntry(fileMgr, targetPath);
-    const clang::FileEntry * targetPathFile = sourcePathRef ? &targetPathRef->getFileEntry() : nullptr;
+    const clang::FileEntry *targetPathFile =
+        sourcePathRef ? &targetPathRef->getFileEntry() : nullptr;
     writer.addInclude(sourcePathFile, info.SourceLine, targetPathFile);
     return true;
   });
