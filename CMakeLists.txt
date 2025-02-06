@@ -35,7 +35,10 @@ function(add_index_executable execname)
     target_compile_options("${execname}" PRIVATE -fno-rtti)
   endif()
   target_link_libraries("${execname}" PRIVATE clangIndexDataStore re2::re2)
-  target_link_options("${execname}" PRIVATE -dead_strip)
+
+  if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    target_link_options("${execname}" PRIVATE -dead_strip)
+  endif()
 endfunction()
 
 add_index_executable(index-import)
