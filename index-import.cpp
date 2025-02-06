@@ -106,7 +106,8 @@ private:
 };
 
 // Returns a FileEntry for any non-empty path.
-static OptionalFileEntryRef getFileEntryRef(FileManager &fileMgr, StringRef path) {
+static OptionalFileEntryRef getFileEntryRef(FileManager &fileMgr,
+                                            StringRef path) {
   if (path.empty()) {
     return std::nullopt;
   }
