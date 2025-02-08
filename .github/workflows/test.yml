@@ -1,0 +1,61 @@
+on: [push, pull_request]
+
+name: Continuous integration
+
+jobs:
+  build:
+    name: Test ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Syntax:
+        # https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstrategymatrix
+        # 
+        # Operating systems available:
+        # https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners/about-github-hosted-runners#standard-github-hosted-runners-for-public-repositories
+        os:
+          - macos-14
+
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Check out source code
+      uses: actions/checkout@v4
+
+    - name: "Install build dependencies"
+      if: matrix.os == 'macos-14'
+      run: brew install ninja
+
+    # https://github.com/swiftlang/llvm-project/releases/tag/swift-6.0.3-RELEASE
+    - name: "LLVM: Download"
+      run: wget https://github.com/swiftlang/llvm-project/archive/refs/tags/swift-6.0.3-RELEASE.tar.gz
+
+    - name: "LLVM: Decompress"
+      run: tar -xzf swift-6.0.3-RELEASE.tar.gz && mv llvm-project-swift-6.0.3-RELEASE llvm && rm swift-6.0.3-RELEASE.tar.gz
+
+    - name: "LLVM: CMake"
+      # Configure a minimal LLVM build for our needs: Only clang, only one architecture.
+      # https://llvm.org/docs/CMake.html
+      #
+      # GitHub runners have very limited disk storage, so use MinSizeRel to avoid filling
+      # up the disk.
+      run: cd llvm && mkdir build && cmake -S llvm -B build -G Ninja -DLLVM_ENABLE_PROJECTS='clang' -DCMAKE_BUILD_TYPE=MinSizeRel -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_PARALLEL_LINK_JOBS=2
+
+    - name: "LLVM: Build"
+      run: cd llvm/build && ninja libIndexStore.dylib
+
+    - name: "index-import: CMake"
+      run: mkdir build && cmake -B build -G Ninja -DClang_DIR=./llvm/build/lib/cmake/clang/ -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+
+    - name: "index-import: Build"
+      run: cd build && ninja
+
+  # For local development, use the playground at
+  # https://rhysd.github.io/actionlint/
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: raven-actions/actionlint@v2
+        with:
+          shellcheck: false
