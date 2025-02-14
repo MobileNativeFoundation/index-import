@@ -49,7 +49,7 @@ jobs:
 
     - name: "LLVM: Build"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
-      run: cd llvm/build && ninja libIndexStore.dylib
+      run: cd llvm/build && ninja libIndexStore.dylib FileCheck
 
     - name: "index-import: CMake"
       run: mkdir build && cmake -B build -G Ninja -DClang_DIR=./llvm/build/lib/cmake/clang/ -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
