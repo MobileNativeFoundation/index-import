@@ -54,6 +54,9 @@ jobs:
     - name: "index-import: Build"
       run: cd build && ninja
 
+    - name: "index-import: test"
+      run: ./tests/run.sh
+
   # For local development, use the playground at
   # https://rhysd.github.io/actionlint/
   actionlint:
