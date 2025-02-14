@@ -6,13 +6,7 @@ jobs:
   build:
     name: Test ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
-        # Syntax:
-        # https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#jobsjob_idstrategymatrix
-        # 
-        # Operating systems available:
-        # https://docs.github.com/en/actions/using-github-hosted-runners/using-github-hosted-runners/about-github-hosted-runners#standard-github-hosted-runners-for-public-repositories
         os:
           - macos-14
 
@@ -25,14 +19,24 @@ jobs:
       if: matrix.os == 'macos-14'
       run: brew install ninja
 
+    - name: Restore LLVM cache
+      id: llvm-cache
+      uses: actions/cache@v4
+      with:
+        path: llvm/build
+        key: ${{ runner.os }}-llvm-cache-6.0.3
+
     # https://github.com/swiftlang/llvm-project/releases/tag/swift-6.0.3-RELEASE
     - name: "LLVM: Download"
+      if: steps.llvm-cache.outputs.cache-hit != 'true'
       run: wget https://github.com/swiftlang/llvm-project/archive/refs/tags/swift-6.0.3-RELEASE.tar.gz
 
     - name: "LLVM: Decompress"
+      if: steps.llvm-cache.outputs.cache-hit != 'true'
       run: tar -xzf swift-6.0.3-RELEASE.tar.gz && mv llvm-project-swift-6.0.3-RELEASE llvm && rm swift-6.0.3-RELEASE.tar.gz
 
     - name: "LLVM: CMake"
+      if: steps.llvm-cache.outputs.cache-hit != 'true'
       # Configure a minimal LLVM build for our needs: Only clang, only one architecture.
       # https://llvm.org/docs/CMake.html
       #
@@ -41,6 +45,7 @@ jobs:
       run: cd llvm && mkdir build && cmake -S llvm -B build -G Ninja -DLLVM_ENABLE_PROJECTS='clang' -DCMAKE_BUILD_TYPE=MinSizeRel -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_PARALLEL_LINK_JOBS=2
 
     - name: "LLVM: Build"
+      if: steps.llvm-cache.outputs.cache-hit != 'true'
       run: cd llvm/build && ninja libIndexStore.dylib
 
     - name: "index-import: CMake"
