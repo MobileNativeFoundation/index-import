@@ -23,7 +23,7 @@ jobs:
       id: llvm-cache
       uses: actions/cache@v4
       with:
-        path: llvm/build
+        path: llvm
         key: ${{ runner.os }}-llvm-cache-6.0.3
 
     # https://github.com/swiftlang/llvm-project/releases/tag/swift-6.0.3-RELEASE
