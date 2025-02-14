@@ -58,7 +58,7 @@ jobs:
       run: cd build && ninja
 
     - name: "index-import: test"
-      run: ./tests/run.sh
+      run: PATH=$PWD/llvm/build/bin ./tests/run.sh
 
   # For local development, use the playground at
   # https://rhysd.github.io/actionlint/
