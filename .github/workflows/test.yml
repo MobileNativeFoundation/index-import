@@ -12,6 +12,7 @@ jobs:
       matrix:
         os:
           - macos-14
+          - ubuntu-22.04
 
     runs-on: ${{ matrix.os }}
     steps:
