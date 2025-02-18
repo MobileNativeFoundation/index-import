@@ -25,7 +25,7 @@ jobs:
 
     - name: "Install build dependencies"
       if: matrix.os == 'ubuntu-22.04'
-      run: sudo apt install -y cmake ninja
+      run: sudo apt install -y cmake ninja-build
 
     - name: Restore LLVM cache
       id: llvm-cache
