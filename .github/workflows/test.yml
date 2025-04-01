@@ -27,16 +27,15 @@ jobs:
       uses: actions/cache@v4
       with:
         path: llvm
-        key: ${{ runner.os }}-llvm-cache-6.0.3
+        key: ${{ runner.os }}-llvm-cache-6.1
 
-    # https://github.com/swiftlang/llvm-project/releases/tag/swift-6.0.3-RELEASE
     - name: "LLVM: Download"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
-      run: wget https://github.com/swiftlang/llvm-project/archive/refs/tags/swift-6.0.3-RELEASE.tar.gz
+      run: wget https://github.com/swiftlang/llvm-project/archive/refs/tags/swift-6.1-RELEASE.tar.gz
 
     - name: "LLVM: Decompress"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
-      run: tar -xzf swift-6.0.3-RELEASE.tar.gz && mv llvm-project-swift-6.0.3-RELEASE llvm && rm swift-6.0.3-RELEASE.tar.gz
+      run: tar -xzf swift-6.1-RELEASE.tar.gz && mv llvm-project-swift-6.1-RELEASE llvm && rm swift-6.1-RELEASE.tar.gz
 
     - name: "LLVM: CMake"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
