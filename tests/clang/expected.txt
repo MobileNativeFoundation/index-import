@@ -14,6 +14,6 @@ CHECK: ProviderVersion: {{.+}}
 CHECK: Dependencies:
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 0
-CHECK: 	UnitOrRecordName: input.c-50XRP2AC092F
+CHECK: 	UnitOrRecordName: input.c-1N81D6PPYGQMX
 CHECK: 	FilePath: /fake/working/dir/input.c
 CHECK: 	ModuleName:

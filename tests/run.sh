@@ -31,7 +31,7 @@ clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
 
 # Check that the expected index files exist.
 ls output/v5/units/input.c.o-* >/dev/null
-ls output/v5/records/2F/input.c-50XRP2AC092F >/dev/null
+ls output/v5/records/MX/input.c-1N81D6PPYGQMX >/dev/null
 
 # Check that the record files are identical.
 diff -q -r {input,output}/v5/records/
@@ -61,7 +61,7 @@ clang -fsyntax-only -index-store-path input input.c
 
 # Check that the expected index files exist.
 ls output/v5/units/input.c.o-* >/dev/null
-ls output/v5/records/2F/input.c-50XRP2AC092F >/dev/null
+ls output/v5/records/MX/input.c-1N81D6PPYGQMX >/dev/null
 
 # Check that the record files are identical.
 diff -q -r {input,output}/v5/records/
@@ -69,7 +69,7 @@ diff -q -r {input,output}/v5/records/
 echo "import-output-file tests passed"
 popd >/dev/null
 
-############################################################
+###########################################################
 
 echo "Testing import-output-file with -file-prefix-map"
 pushd "$base_dir"/import_only >/dev/null
@@ -92,7 +92,7 @@ clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
 
 # Check that the expected index files exist.
 ls output/v5/units/input.c.o-* >/dev/null
-ls output/v5/records/2F/input.c-50XRP2AC092F >/dev/null
+ls output/v5/records/MX/input.c-1N81D6PPYGQMX >/dev/null
 
 # Check that the record files are identical.
 diff -q -r {input,output}/v5/records/
@@ -122,8 +122,8 @@ clang -fsyntax-only -index-store-path input input.c
   | FileCheck expected.txt
 
 # Check that the expected index files exist.
-ls output/v5/units/output.c.o-1I92L511L7IRP >/dev/null
-ls output/v5/records/2F/input.c-50XRP2AC092F >/dev/null
+ls output/v5/units/output.c.o-2LQD3ZSM9CGHD >/dev/null
+ls output/v5/records/MX/input.c-1N81D6PPYGQMX >/dev/null
 
 # Check that the record files are identical.
 diff -q -r {input,output}/v5/records/
@@ -153,8 +153,8 @@ clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
   | FileCheck expected.txt
 
 # Check that the expected index files exist.
-ls output/v5/units/output.c.o-1I92L511L7IRP >/dev/null
-ls output/v5/records/2F/input.c-50XRP2AC092F >/dev/null
+ls output/v5/units/output.c.o-2LQD3ZSM9CGHD >/dev/null
+ls output/v5/records/MX/input.c-1N81D6PPYGQMX >/dev/null
 
 # Check that the record files are identical.
 diff -q -r {input,output}/v5/records/
@@ -184,8 +184,8 @@ clang -fsyntax-only -index-store-path input input.c -index-unit-output-path /foo
   | FileCheck expected.txt
 
 # Check that the expected index files exist.
-ls output/v5/units/output.c.o-1I92L511L7IRP >/dev/null
-ls output/v5/records/2F/input.c-50XRP2AC092F >/dev/null
+ls output/v5/units/output.c.o-2LQD3ZSM9CGHD >/dev/null
+ls output/v5/records/MX/input.c-1N81D6PPYGQMX >/dev/null
 
 # Check that the record files are identical.
 diff -q -r {input,output}/v5/records/
@@ -215,8 +215,8 @@ xcrun swiftc -target "$(uname -m)-apple-macosx10.9.0" -index-store-path input -c
   | FileCheck expected.txt
 
 # Check that the expected index files exist.
-ls output/v5/units/output.o-2WR4IG6X35AJB >/dev/null
-ls output/v5/records/7Q/input.swift-17Z5ZBKNZQ27Q >/dev/null
+ls output/v5/units/output.o-2L127TAXYGI6T >/dev/null
+ls output/v5/records/S9/input.swift-1M4LGH2SWM0S9 >/dev/null
 
 # Check that the record files are identical.
 diff -q -r {input,output}/v5/records/
@@ -246,8 +246,8 @@ xcrun swiftc -target "$(uname -m)-apple-macosx10.9.0" -index-store-path input -c
   | FileCheck expected.txt
 
 # Check that the expected index files exist.
-ls output/v5/units/output.o-2WR4IG6X35AJB >/dev/null
-ls output/v5/records/7Q/input.swift-17Z5ZBKNZQ27Q >/dev/null
+ls output/v5/units/output.o-2L127TAXYGI6T >/dev/null
+ls output/v5/records/S9/input.swift-1M4LGH2SWM0S9 >/dev/null
 
 # Check that the record files are identical.
 diff -q -r {input,output}/v5/records/
@@ -279,10 +279,10 @@ clang -fsyntax-only -index-store-path input2 input2.c "-ffile-prefix-map=$PWD=."
   | FileCheck expected.txt
 
 # Check that the expected index files exist.
-ls output/v5/units/output1.c.o-ZW8ISK3OCQ8L >/dev/null
-ls output/v5/units/output2.c.o-1ZBCL54RNWOPC >/dev/null
-ls output/v5/records/WU/input1.c-H8E66JWPU5WU >/dev/null
-ls output/v5/records/LF/input2.c-1UNY7PC9RPELF >/dev/null
+ls output/v5/units/output1.c.o-383YT9Q6Q1VBR >/dev/null
+ls output/v5/units/output2.c.o-3OMGQ7MOFBSUX >/dev/null
+ls output/v5/records/L5/input1.c-3D4JIVRT3MUL5 >/dev/null
+ls output/v5/records/FG/input2.c-V47TGXUYI0FG >/dev/null
 
 # Check that the record files are identical.
 for record in {input1,input2}/v5/records/*; do
