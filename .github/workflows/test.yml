@@ -12,9 +12,11 @@ jobs:
   build:
     name: Test ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os:
           - macos-14
+          - ubuntu-22.04
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -24,6 +26,10 @@ jobs:
     - name: "Install build dependencies"
       if: matrix.os == 'macos-14'
       run: brew install ninja
+
+    - name: "Install build dependencies"
+      if: matrix.os == 'ubuntu-22.04'
+      run: sudo apt install -y cmake ninja-build
 
     - name: Restore LLVM cache
       id: llvm-cache
@@ -54,7 +60,7 @@ jobs:
 
     - name: "LLVM: Build"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
-      run: cd llvm/build && ninja libIndexStore.dylib FileCheck
+      run: cd llvm/build && ninja IndexStore FileCheck
 
     - name: "index-import: CMake"
       run: mkdir build && cmake -B build -G Ninja -DClang_DIR=./llvm/build/lib/cmake/clang/ -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
