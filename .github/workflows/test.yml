@@ -5,6 +5,9 @@ on:
 
 name: Continuous integration
 
+env:
+  SWIFT_VERSION: 6.1
+
 jobs:
   build:
     name: Test ${{ matrix.os }}
@@ -27,16 +30,18 @@ jobs:
       uses: actions/cache@v4
       with:
         path: llvm
-        key: ${{ runner.os }}-llvm-cache-6.0.3
+        key: ${{ runner.os }}-llvm-cache-${{ env.SWIFT_VERSION }}
 
-    # https://github.com/swiftlang/llvm-project/releases/tag/swift-6.0.3-RELEASE
     - name: "LLVM: Download"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
-      run: wget https://github.com/swiftlang/llvm-project/archive/refs/tags/swift-6.0.3-RELEASE.tar.gz
+      run: wget https://github.com/swiftlang/llvm-project/archive/refs/tags/swift-${{ env.SWIFT_VERSION }}-RELEASE.tar.gz
 
     - name: "LLVM: Decompress"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
-      run: tar -xzf swift-6.0.3-RELEASE.tar.gz && mv llvm-project-swift-6.0.3-RELEASE llvm && rm swift-6.0.3-RELEASE.tar.gz
+      run: |
+        tar -xzf swift-${{ env.SWIFT_VERSION }}-RELEASE.tar.gz
+        mv llvm-project-swift-${{ env.SWIFT_VERSION }}-RELEASE llvm
+        rm swift-${{ env.SWIFT_VERSION }}-RELEASE.tar.gz
 
     - name: "LLVM: CMake"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
@@ -57,9 +62,10 @@ jobs:
     - name: "index-import: Build"
       run: cd build && ninja
 
-    - name: "index-import: test"
-      run: |
-        PATH=$PWD/llvm/build/bin:$PATH ./tests/run.sh
+    # TODO: Re-enable once GitHub actions support Xcode 16.3+
+    # - name: "index-import: test"
+    #   run: |
+    #     PATH=$PWD/llvm/build/bin:$PATH ./tests/run.sh
 
   # For local development, use the playground at
   # https://rhysd.github.io/actionlint/

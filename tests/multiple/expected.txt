@@ -14,7 +14,7 @@ CHECK: ProviderVersion: {{.+}}
 CHECK: Dependencies:
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 0
-CHECK: 	UnitOrRecordName: input1.c-H8E66JWPU5WU
+CHECK: 	UnitOrRecordName: input1.c-3D4JIVRT3MUL5
 CHECK: 	FilePath: /fake/working/dir/input1.c
 CHECK: 	ModuleName:
 CHECK: ---
@@ -33,6 +33,6 @@ CHECK: ProviderVersion: {{.+}}
 CHECK: Dependencies:
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 0
-CHECK: 	UnitOrRecordName: input2.c-1UNY7PC9RPELF
+CHECK: 	UnitOrRecordName: input2.c-V47TGXUYI0FG
 CHECK: 	FilePath: /fake/working/dir/input2.c
 CHECK: 	ModuleName:

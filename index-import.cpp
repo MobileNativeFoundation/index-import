@@ -7,6 +7,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/xxhash.h"
 
 #include <cstdlib>
 #include <regex>
@@ -104,14 +105,21 @@ private:
   std::set<StringRef> _moduleNames;
 };
 
-// Returns a FileEntry for any non-empty path.
-static const FileEntry *getFileEntry(FileManager &fileMgr, StringRef path) {
+// Returns a OptionalFileEntryRef for any non-empty path.
+static const OptionalFileEntryRef getFileEntryRef(FileManager &fileMgr,
+                                                  StringRef path) {
   if (path.empty()) {
-    return nullptr;
+    return std::nullopt;
   }
 
   // Use getVirtualFile to handle both valid and invalid paths.
-  return fileMgr.getVirtualFile(path, /*size*/ 0, /*modtime*/ 0);
+  return fileMgr.getVirtualFileRef(path, /*size*/ 0, /*modtime*/ 0);
+}
+
+/// Returns a FileEntry for any non-empty path.
+static const FileEntry *getFileEntry(FileManager &fileMgr, StringRef path) {
+  auto ref = getFileEntryRef(fileMgr, path);
+  return ref ? &ref->getFileEntry() : nullptr;
 }
 
 void getUnitPathForOutputFile(StringRef unitsPath, StringRef filePath,
@@ -126,8 +134,8 @@ void getUnitPathForOutputFile(StringRef unitsPath, StringRef filePath,
   str.append(fname.begin(), fname.end());
   str.push_back('-');
   clangPathRemapper.remapPath(absPath);
-  llvm::hash_code pathHashVal = llvm::hash_value(absPath);
-  llvm::APInt(64, pathHashVal).toString(str, 36, /*Signed=*/false);
+  uint64_t pathHashVal = llvm::xxh3_64bits(absPath);
+  llvm::APInt(64, pathHashVal).toStringUnsigned(str, /*Radix*/ 36);
 }
 
 std::optional<bool>
@@ -267,7 +275,7 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
   auto writer = IndexUnitWriter(
       fileMgr, OutputIndexPath, reader->getProviderIdentifier(),
       reader->getProviderVersion(), outputFile, reader->getModuleName(),
-      getFileEntry(fileMgr, mainFilePath), reader->isSystemUnit(),
+      getFileEntryRef(fileMgr, mainFilePath), reader->isSystemUnit(),
       reader->isModuleUnit(), reader->isDebugCompilation(), reader->getTarget(),
       sysrootPath, clangPathRemapper, moduleNames.getModuleInfo);
 
@@ -282,7 +290,7 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
     const auto isSystem = info.IsSystem;
 
     const auto filePath = remapper.remap(info.FilePath);
-    const auto file = getFileEntry(fileMgr, filePath);
+    const auto file = getFileEntryRef(fileMgr, filePath);
 
     switch (info.Kind) {
     case IndexUnitReader::DependencyKind::Unit: {
