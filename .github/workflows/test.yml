@@ -14,15 +14,19 @@ jobs:
     strategy:
       matrix:
         os:
-          - macos-14
+          - macos-15
 
     runs-on: ${{ matrix.os }}
     steps:
     - name: Check out source code
       uses: actions/checkout@v4
 
+    - name: "Print Xcode version"
+      if: matrix.os == 'macos-15'
+      run: xcodebuild -version
+
     - name: "Install build dependencies"
-      if: matrix.os == 'macos-14'
+      if: matrix.os == 'macos-15'
       run: brew install ninja
 
     - name: Restore LLVM cache
@@ -62,10 +66,9 @@ jobs:
     - name: "index-import: Build"
       run: cd build && ninja
 
-    # TODO: Re-enable once GitHub actions support Xcode 16.3+
-    # - name: "index-import: test"
-    #   run: |
-    #     PATH=$PWD/llvm/build/bin:$PATH ./tests/run.sh
+    - name: "index-import: test"
+      run: |
+        PATH=$PWD/llvm/build/bin:$PATH ./tests/run.sh
 
   # For local development, use the playground at
   # https://rhysd.github.io/actionlint/
