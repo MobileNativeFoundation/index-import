@@ -10,7 +10,7 @@ find_package(re2 QUIET)
 if(NOT re2_FOUND)
   # There's no re2 library available on this system, download and
   # build it from GitHub.
-  
+
   # Abseil is a build requirement for re2.
   set(ABSL_PROPAGATE_CXX_STD ON)
   set(ABSL_ENABLE_INSTALL ON)
@@ -18,7 +18,7 @@ if(NOT re2_FOUND)
   FetchContent_Declare(
     absl
     GIT_REPOSITORY "https://github.com/abseil/abseil-cpp.git"
-    GIT_TAG "20230125.3"
+    GIT_TAG "20250127.1"
   )
   FetchContent_MakeAvailable(absl)
 
