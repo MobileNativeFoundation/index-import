@@ -21,13 +21,17 @@ jobs:
     - name: Check out source code
       uses: actions/checkout@v4
 
-    - name: "Print Xcode version"
-      if: matrix.os == 'macos-15'
-      run: xcodebuild -version
-
     - name: "List Xcode versions"
       if: matrix.os == 'macos-15'
       run: ls /Applications | grep Xcode
+
+    - name: "Select Xcode version"
+      if: matrix.os == 'macos-15'
+      run: sudo xcode-select -s /Applications/Xcode_16.3.app
+
+    - name: "Print Xcode version"
+      if: matrix.os == 'macos-15'
+      run: xcodebuild -version
 
     - name: "Install build dependencies"
       if: matrix.os == 'macos-15'
@@ -38,7 +42,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: llvm
-        key: ${{ runner.os }}-llvm-cache-${{ env.SWIFT_VERSION }}
+        key: ${{ runner.os }}-llvm-cache-${{ env.SWIFT_VERSION }}-bump1
 
     - name: "LLVM: Download"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
