@@ -2,6 +2,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The new version to tag, ex: 1.0.5'
+        required: true
+        type: string
 
 name: Continuous integration
 
@@ -72,6 +78,39 @@ jobs:
     - name: "index-import: test"
       run: |
         PATH=$PWD/llvm/build/bin:$PATH ./tests/run.sh
+
+    - name: "index-import: archive"
+      run: |
+        cd build
+        COPYFILE_DISABLE=1 tar czvf index-import.tar.gz absolute-unit index-import
+
+    - name: "index-import: upload"
+      uses: actions/upload-artifact@v4
+      path: build/index-import.tar.gz
+
+  create-release:
+    name: Create release
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v4
+
+      - name: Download index-import artifact
+        uses: actions/download-artifact@v4
+
+      - name: Create release
+        run: |
+          set -euo pipefail
+
+          macos_archive="index-import.tar.gz"
+          ./.github/generate-notes.sh "$SWIFT_VERSION" "$macos_archive" | tee notes.md
+          cat notes.md
+          echo "would have called" gh release create "$TAG" --title "$TAG" --target "$GITHUB_REF_NAME" --notes-file notes.md "$macos_archive"
+        env:
+          TAG: ${{ inputs.tag }}
+          SWIFT_VERSION: ${{ env.SWIFT_VERSION }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # For local development, use the playground at
   # https://rhysd.github.io/actionlint/
