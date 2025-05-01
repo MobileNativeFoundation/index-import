@@ -79,14 +79,14 @@ jobs:
       run: |
         PATH=$PWD/llvm/build/bin:$PATH ./tests/run.sh
 
-#     - name: "index-import: archive"
-#       run: |
-#         cd build
-#         COPYFILE_DISABLE=1 tar czvf index-import.tar.gz absolute-unit index-import
+    - name: "index-import: archive"
+      run: |
+        cd build
+        COPYFILE_DISABLE=1 tar czvf index-import.tar.gz absolute-unit index-import
 
-#     - name: "index-import: upload"
-#       uses: actions/upload-artifact@v4
-#       path: build/index-import.tar.gz
+    # - name: "index-import: upload"
+    #   uses: actions/upload-artifact@v4
+    #   path: build/index-import.tar.gz
 
   # create-release:
   #   name: Create release
