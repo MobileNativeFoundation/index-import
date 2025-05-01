@@ -42,7 +42,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: llvm
-        key: ${{ runner.os }}-llvm-cache-${{ env.SWIFT_VERSION }}-bump1
+        key: ${{ runner.os }}-llvm-cache-${{ env.SWIFT_VERSION }}-bump2
 
     - name: "LLVM: Download"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
@@ -62,14 +62,14 @@ jobs:
       #
       # GitHub runners have very limited disk storage, so use MinSizeRel to avoid filling
       # up the disk.
-      run: cd llvm && mkdir build && cmake -S llvm -B build -G Ninja -DLLVM_ENABLE_PROJECTS='clang' -DCMAKE_BUILD_TYPE=MinSizeRel -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_PARALLEL_LINK_JOBS=2
+      run: cd llvm && mkdir build && cmake -S llvm -B build -G Ninja -DLLVM_ENABLE_PROJECTS='clang' -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DLLVM_PARALLEL_LINK_JOBS=2 -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
 
     - name: "LLVM: Build"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
       run: cd llvm/build && ninja libIndexStore.dylib FileCheck
 
     - name: "index-import: CMake"
-      run: mkdir build && cmake -B build -G Ninja -DClang_DIR=./llvm/build/lib/cmake/clang/ -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+      run: mkdir build && cmake -B build -G Ninja -DClang_DIR=./llvm/build/lib/cmake/clang/ -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
 
     - name: "index-import: Build"
       run: cd build && ninja
