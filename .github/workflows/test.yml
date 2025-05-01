@@ -107,7 +107,7 @@ jobs:
 
           ls -R
 
-          macos_archive="artifacts/index-import.tar.gz"
+          macos_archive="artifact/index-import.tar.gz"
           ./.github/generate-notes.sh "$SWIFT_VERSION" "$macos_archive" | tee notes.md
           cat notes.md
           echo "would have called" gh release create "$TAG" --title "$TAG" --target "$GITHUB_REF_NAME" --notes-file notes.md "$macos_archive"
