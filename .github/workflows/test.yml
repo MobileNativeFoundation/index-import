@@ -106,6 +106,7 @@ jobs:
         set -euo pipefail
 
         macos_archive="index-import.tar.gz"
+        mv "artifact/index-import.tar.gz" "$macos_archive"
         ./.github/generate-notes.sh "$SWIFT_VERSION" "$macos_archive" | tee notes.md
         gh release create "$TAG" --title "$TAG" --target "$GITHUB_REF_NAME" --notes-file notes.md "$macos_archive"
       env:
