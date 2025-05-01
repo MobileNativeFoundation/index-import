@@ -1,3 +1,8 @@
+Releasing is now done through this github action: https://github.com/MobileNativeFoundation/index-import/actions/workflows/test.yml
+
+If you want to build your own release manually, you can read the github
+action or try to follow the steps below.
+
 To build and release a multi architecture executable you need to follow
 a few steps:
 
@@ -9,7 +14,7 @@ a few steps:
 cd /path/to/llvm-project
 mkdir build
 cd build
-cmake ../llvm -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DLLVM_ENABLE_PROJECTS=clang
+cmake ../llvm -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DLLVM_ENABLE_PROJECTS=clang  -DLLVM_USE_STATIC_ZSTD=ON -DLLVM_TARGETS_TO_BUILD="X86;AArch64"
 ninja libIndexStore.dylib
 ```
 
