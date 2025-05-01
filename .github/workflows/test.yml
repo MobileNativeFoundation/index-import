@@ -86,7 +86,8 @@ jobs:
 
     - name: "index-import: upload"
       uses: actions/upload-artifact@v4
-      path: build/index-import.tar.gz
+      with:
+        path: build/index-import.tar.gz
 
   # create-release:
   #   name: Create release
