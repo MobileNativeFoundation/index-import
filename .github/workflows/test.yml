@@ -88,14 +88,14 @@ jobs:
       uses: actions/upload-artifact@v4
       path: build/index-import.tar.gz
 
-  create-release:
-    name: Create release
-    needs: build
-    runs-on: ubuntu-22.04
-    if: ${{ github.event_name == 'workflow_dispatch' }}
-    steps:
-      - name: Check out source code
-        uses: actions/checkout@v4
+  # create-release:
+  #   name: Create release
+  #   needs: build
+  #   runs-on: ubuntu-22.04
+  #   if: ${{ github.event_name == 'workflow_dispatch' }}
+  #   steps:
+  #     - name: Check out source code
+  #       uses: actions/checkout@v4
 
       # - name: Download index-import artifact
       #   uses: actions/download-artifact@v4
