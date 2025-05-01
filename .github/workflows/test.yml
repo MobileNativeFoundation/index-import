@@ -57,11 +57,6 @@ jobs:
 
     - name: "LLVM: CMake"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
-      # Configure a minimal LLVM build for our needs: Only clang, only one architecture.
-      # https://llvm.org/docs/CMake.html
-      #
-      # GitHub runners have very limited disk storage, so use MinSizeRel to avoid filling
-      # up the disk.
       run: cd llvm && mkdir build && cmake -S llvm -B build -G Ninja -DLLVM_ENABLE_PROJECTS='clang' -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="X86;AArch64" -DLLVM_PARALLEL_LINK_JOBS=2 -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
 
     - name: "LLVM: Build"
