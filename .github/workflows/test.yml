@@ -105,6 +105,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          ls -R
+
           macos_archive="index-import.tar.gz"
           ./.github/generate-notes.sh "$SWIFT_VERSION" "$macos_archive" | tee notes.md
           cat notes.md
