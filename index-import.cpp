@@ -274,7 +274,7 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
 
   auto writer = IndexUnitWriter(
       fileMgr, OutputIndexPath, reader->getProviderIdentifier(),
-      reader->getProviderVersion(), outputFile, reader->getModuleName(),
+      reader->getProviderVersion(), false, outputFile, reader->getModuleName(),
       getFileEntryRef(fileMgr, mainFilePath), reader->isSystemUnit(),
       reader->isModuleUnit(), reader->isDebugCompilation(), reader->getTarget(),
       sysrootPath, clangPathRemapper, moduleNames.getModuleInfo);
