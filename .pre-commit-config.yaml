@@ -1,9 +1,9 @@
 repos:
 -   repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.11.0.1
+    rev: v0.11.0.1-1
     hooks:
     -   id: shellcheck
 -   repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v21.1.7
+    rev: v23.1.0
     hooks:
     -   id: clang-format
