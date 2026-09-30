@@ -66,6 +66,35 @@ popd >/dev/null
 
 ############################################################
 
+echo "Testing compressed units"
+pushd "$base_dir"/import_only >/dev/null
+
+# Clean any test state from previous runs.
+rm -fr input output
+
+# Produce a compressed index and check the unit's on-disk compression marker.
+clang -fsyntax-only -index-store-path input -index-store-compress input.c
+for unit in input/v5/units/*; do
+  test "$(head -c 5 "$unit")" = CIDXU
+done
+
+"$index_import" input output
+
+# Importing must preserve compression and leave the unit readable.
+for unit in output/v5/units/*; do
+  test "$(head -c 5 "$unit")" = CIDXU
+done
+"$absolute_unit" \
+  output/v5/units/* \
+  | FileCheck "-DPWD=$PWD" expected.txt
+
+diff -q -r {input,output}/v5/records/
+
+echo "compressed unit tests passed"
+popd >/dev/null
+
+############################################################
+
 echo "Testing import-output-file"
 pushd "$base_dir"/import_only >/dev/null
 
