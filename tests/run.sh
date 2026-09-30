@@ -22,6 +22,13 @@ rm -fr input output
 # Produce the index.
 clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
 
+echo "Testing invalid remap capture reference"
+if remap_error=$("$index_import" -remap '(input)=$2' input output 2>&1); then
+    echo "Expected remap with a nonexistent capture group to fail" >&2
+    exit 1
+fi
+FileCheck invalid-remap.txt <<< "$remap_error"
+
 "$index_import" input output
 
 # See https://llvm.org/docs/CommandGuide/FileCheck.html

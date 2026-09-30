@@ -1,0 +1,2 @@
+CHECK: error: invalid replacement string '\2' for pattern '(input)': Rewrite schema requests 2 matches, but the regexp only has 1 parenthesized subexpressions.
+CHECK-NEXT: Aborting due to 1 error.
