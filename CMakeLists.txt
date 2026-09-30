@@ -63,9 +63,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   find_path(DISPATCH_INCLUDE_DIR dispatch/dispatch.h
     HINTS "${SWIFT_BIN_DIR}/../lib/swift")
   find_library(DISPATCH_LIBRARY dispatch
-    HINTS "${SWIFT_BIN_DIR}/../lib/swift/linux")
+    HINTS "${SWIFT_BIN_DIR}/../lib/swift_static/linux" "${SWIFT_BIN_DIR}/../lib/swift/linux")
   find_library(BLOCKS_RUNTIME_LIBRARY BlocksRuntime
-    HINTS "${SWIFT_BIN_DIR}/../lib/swift/linux")
+    HINTS "${SWIFT_BIN_DIR}/../lib/swift_static/linux" "${SWIFT_BIN_DIR}/../lib/swift/linux")
   if(NOT DISPATCH_INCLUDE_DIR OR NOT DISPATCH_LIBRARY OR NOT BLOCKS_RUNTIME_LIBRARY)
     message(FATAL_ERROR "libdispatch headers, libdispatch, and BlocksRuntime are required on Linux")
   endif()

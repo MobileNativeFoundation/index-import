@@ -118,20 +118,22 @@ jobs:
     - name: Check out source code
       uses: actions/checkout@v4
 
-    - name: Download index-import artifact
+    - name: Download index-import artifacts
       uses: actions/download-artifact@v4
       with:
-        name: index-import-macOS
-        path: artifact
+        pattern: index-import-*
+        path: artifacts
 
     - name: Create release
       run: |
         set -euo pipefail
 
         macos_archive="index-import.tar.gz"
-        mv "artifact/index-import.tar.gz" "$macos_archive"
-        ./.github/generate-notes.sh "$SWIFT_VERSION" "$macos_archive" | tee notes.md
-        gh release create "$TAG" --title "$TAG" --target "$GITHUB_REF_NAME" --notes-file notes.md "$macos_archive"
+        linux_archive="index-import-linux-x86_64.tar.gz"
+        mv "artifacts/index-import-macOS/index-import.tar.gz" "$macos_archive"
+        mv "artifacts/index-import-Linux/index-import.tar.gz" "$linux_archive"
+        ./.github/generate-notes.sh "$SWIFT_VERSION" "$macos_archive" "$linux_archive" | tee notes.md
+        gh release create "$TAG" --title "$TAG" --target "$GITHUB_REF_NAME" --notes-file notes.md "$macos_archive" "$linux_archive"
       env:
         TAG: ${{ inputs.tag }}
         SWIFT_VERSION: ${{ env.SWIFT_VERSION }}
