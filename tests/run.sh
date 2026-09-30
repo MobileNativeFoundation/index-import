@@ -270,7 +270,7 @@ _swiftc -index-store-path input -c input.swift -file-prefix-map "$PWD=." && rm i
 
 # Check that the expected index files exist.
 ls output/v5/units/output.o-2L127TAXYGI6T >/dev/null
-ls output/v5/records/S9/input.swift-1M4LGH2SWM0S9 >/dev/null
+ls output/v5/records/D9/input.swift-3A5CUXXGLMSD9 >/dev/null
 
 # Check that the record files are identical.
 diff -q -r {input,output}/v5/records/
@@ -301,7 +301,7 @@ _swiftc -index-store-path input -c input.swift -index-unit-output-path /foo/some
 
 # Check that the expected index files exist.
 ls output/v5/units/output.o-2L127TAXYGI6T >/dev/null
-ls output/v5/records/S9/input.swift-1M4LGH2SWM0S9 >/dev/null
+ls output/v5/records/D9/input.swift-3A5CUXXGLMSD9 >/dev/null
 
 # Check that the record files are identical.
 diff -q -r {input,output}/v5/records/
