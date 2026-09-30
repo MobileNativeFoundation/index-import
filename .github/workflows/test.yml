@@ -18,9 +18,11 @@ jobs:
   build:
     name: Test ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os:
           - macos-15
+          - ubuntu-22.04
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -43,9 +45,19 @@ jobs:
       if: matrix.os == 'macos-15'
       run: brew install ninja
 
+    - name: "Install build dependencies"
+      if: matrix.os == 'ubuntu-22.04'
+      run: sudo apt install -y cmake ninja-build
+
+    - name: Set up Swift
+      if: matrix.os == 'ubuntu-22.04'
+      uses: swift-actions/setup-swift@v2
+      with:
+        swift-version: ${{ env.SWIFT_VERSION }}
+
     - name: Restore LLVM cache
       id: llvm-cache
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       with:
         path: llvm
         key: ${{ runner.os }}-llvm-cache-${{ env.SWIFT_VERSION }}-bump3
@@ -67,7 +79,14 @@ jobs:
 
     - name: "LLVM: Build"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
-      run: cd llvm/build && ninja libIndexStore.dylib FileCheck
+      run: cd llvm/build && ninja IndexStore FileCheck
+
+    - name: Save LLVM cache
+      if: steps.llvm-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: llvm
+        key: ${{ steps.llvm-cache.outputs.cache-primary-key }}
 
     - name: "index-import: CMake"
       run: mkdir build && cmake -B build -G Ninja -DClang_DIR=./llvm/build/lib/cmake/clang/ -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
@@ -87,6 +106,7 @@ jobs:
     - name: "index-import: upload"
       uses: actions/upload-artifact@v4
       with:
+        name: index-import-${{ runner.os }}
         path: build/index-import.tar.gz
 
   create-release:
@@ -98,17 +118,22 @@ jobs:
     - name: Check out source code
       uses: actions/checkout@v4
 
-    - name: Download index-import artifact
+    - name: Download index-import artifacts
       uses: actions/download-artifact@v4
+      with:
+        pattern: index-import-*
+        path: artifacts
 
     - name: Create release
       run: |
         set -euo pipefail
 
         macos_archive="index-import.tar.gz"
-        mv "artifact/index-import.tar.gz" "$macos_archive"
-        ./.github/generate-notes.sh "$SWIFT_VERSION" "$macos_archive" | tee notes.md
-        gh release create "$TAG" --title "$TAG" --target "$GITHUB_REF_NAME" --notes-file notes.md "$macos_archive"
+        linux_archive="index-import-linux-x86_64.tar.gz"
+        mv "artifacts/index-import-macOS/index-import.tar.gz" "$macos_archive"
+        mv "artifacts/index-import-Linux/index-import.tar.gz" "$linux_archive"
+        ./.github/generate-notes.sh "$SWIFT_VERSION" "$macos_archive" "$linux_archive" | tee notes.md
+        gh release create "$TAG" --title "$TAG" --target "$GITHUB_REF_NAME" --notes-file notes.md "$macos_archive" "$linux_archive"
       env:
         TAG: ${{ inputs.tag }}
         SWIFT_VERSION: ${{ env.SWIFT_VERSION }}

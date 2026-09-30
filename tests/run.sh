@@ -7,8 +7,26 @@ base_dir=$(dirname "$0")
 readonly index_import=../../build/index-import
 readonly absolute_unit=../../build/absolute-unit
 
-clang() {
+if [[ $(uname -s) == Darwin ]]; then
+  _clang() {
     xcrun --sdk macosx clang -mmacosx-version-min=10.0.0 "$@"
+  }
+  _swiftc() {
+    xcrun swiftc -target "$(uname -m)-apple-macosx10.9.0" "$@"
+  }
+  readonly check_prefixes=CHECK,DARWIN
+else
+  _clang() {
+    clang "$@"
+  }
+  _swiftc() {
+    swiftc "$@"
+  }
+  readonly check_prefixes=CHECK,LINUX
+fi
+
+filecheck() {
+  FileCheck --check-prefixes="$check_prefixes" "$@"
 }
 
 ############################################################
@@ -20,7 +38,7 @@ pushd "$base_dir"/import_only >/dev/null
 rm -fr input output
 
 # Produce the index.
-clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
+_clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
 
 echo "Testing invalid remap capture reference"
 if remap_error=$("$index_import" -remap '(input)=$2' input output 2>&1); then
@@ -34,7 +52,7 @@ FileCheck invalid-remap.txt <<< "$remap_error"
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
 "$absolute_unit" \
   output/v5/units/* \
-  | FileCheck "-DPWD=$PWD" expected.txt
+  | filecheck "-DPWD=$PWD" expected.txt
 
 # Check that the expected index files exist.
 ls output/v5/units/input.c.o-* >/dev/null
@@ -55,7 +73,7 @@ pushd "$base_dir"/import_only >/dev/null
 rm -fr input output
 
 # Produce the index.
-clang -fsyntax-only -index-store-path input input.c
+_clang -fsyntax-only -index-store-path input input.c
 
 "$index_import" \
   -import-output-file input.c.o \
@@ -64,7 +82,7 @@ clang -fsyntax-only -index-store-path input input.c
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
 "$absolute_unit" \
   output/v5/units/input.c.o-* \
-  | FileCheck "-DPWD=$PWD" expected.txt
+  | filecheck "-DPWD=$PWD" expected.txt
 
 # Check that the expected index files exist.
 ls output/v5/units/input.c.o-* >/dev/null
@@ -85,7 +103,7 @@ pushd "$base_dir"/import_only >/dev/null
 rm -fr input output
 
 # Produce the index.
-clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
+_clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
 
 "$index_import" \
   -import-output-file input.c.o \
@@ -95,7 +113,7 @@ clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
 "$absolute_unit" \
   output/v5/units/input.c.o-* \
-  | FileCheck "-DPWD=." expected.txt
+  | filecheck "-DPWD=." expected.txt
 
 # Check that the expected index files exist.
 ls output/v5/units/input.c.o-* >/dev/null
@@ -116,7 +134,7 @@ pushd "$base_dir"/clang >/dev/null
 rm -fr input output
 
 # Produce the index.
-clang -fsyntax-only -index-store-path input input.c
+_clang -fsyntax-only -index-store-path input input.c
 
 "$index_import" \
   -remap "$PWD/input.c.o"="/fake/working/dir/output.c.o" \
@@ -126,7 +144,7 @@ clang -fsyntax-only -index-store-path input input.c
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
 "$absolute_unit" \
   output/v5/units/* \
-  | FileCheck expected.txt
+  | filecheck expected.txt
 
 # Check that the expected index files exist.
 ls output/v5/units/output.c.o-2LQD3ZSM9CGHD >/dev/null
@@ -147,7 +165,7 @@ pushd "$base_dir"/clang >/dev/null
 rm -fr input output
 
 # Produce the index.
-clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
+_clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
 
 "$index_import" \
   -remap '\./input.c.o=output.c.o' \
@@ -157,7 +175,7 @@ clang -fsyntax-only -index-store-path input input.c "-ffile-prefix-map=$PWD=."
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
 "$absolute_unit" \
   output/v5/units/* \
-  | FileCheck expected.txt
+  | filecheck expected.txt
 
 # Check that the expected index files exist.
 ls output/v5/units/output.c.o-2LQD3ZSM9CGHD >/dev/null
@@ -178,7 +196,7 @@ pushd "$base_dir"/clang >/dev/null
 rm -fr input output
 
 # Produce the index.
-clang -fsyntax-only -index-store-path input input.c -index-unit-output-path /foo/input.c.o
+_clang -fsyntax-only -index-store-path input input.c -index-unit-output-path /foo/input.c.o
 
 "$index_import" \
   -remap '/foo/input.c.o=/fake/working/dir/output.c.o' \
@@ -188,7 +206,7 @@ clang -fsyntax-only -index-store-path input input.c -index-unit-output-path /foo
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
 "$absolute_unit" \
   output/v5/units/* \
-  | FileCheck expected.txt
+  | filecheck expected.txt
 
 # Check that the expected index files exist.
 ls output/v5/units/output.c.o-2LQD3ZSM9CGHD >/dev/null
@@ -209,7 +227,7 @@ pushd "$base_dir"/swiftc >/dev/null
 rm -fr input output
 
 # Produce the index and delete the unneeded .o.
-xcrun swiftc -target "$(uname -m)-apple-macosx10.9.0" -index-store-path input -c input.swift -file-prefix-map "$PWD=." && rm input.o
+_swiftc -index-store-path input -c input.swift -file-prefix-map "$PWD=." && rm input.o
 
 "$index_import" \
   -remap '\./input.o=output.o' \
@@ -219,7 +237,7 @@ xcrun swiftc -target "$(uname -m)-apple-macosx10.9.0" -index-store-path input -c
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
 "$absolute_unit" \
   output/v5/units/output* output/v5/units/*.swiftinterface* \
-  | FileCheck expected.txt
+  | filecheck expected.txt
 
 # Check that the expected index files exist.
 ls output/v5/units/output.o-2L127TAXYGI6T >/dev/null
@@ -240,7 +258,7 @@ pushd "$base_dir"/swiftc >/dev/null
 rm -fr input output
 
 # Produce the index and delete the unneeded .o.
-xcrun swiftc -target "$(uname -m)-apple-macosx10.9.0" -index-store-path input -c input.swift -index-unit-output-path /foo/someoutput.o && rm input.o
+_swiftc -index-store-path input -c input.swift -index-unit-output-path /foo/someoutput.o && rm input.o
 
 "$index_import" \
   -remap '/foo/someoutput.o=output.o' \
@@ -250,7 +268,7 @@ xcrun swiftc -target "$(uname -m)-apple-macosx10.9.0" -index-store-path input -c
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
 "$absolute_unit" \
   output/v5/units/output* output/v5/units/*.swiftinterface* \
-  | FileCheck expected.txt
+  | filecheck expected.txt
 
 # Check that the expected index files exist.
 ls output/v5/units/output.o-2L127TAXYGI6T >/dev/null
@@ -271,8 +289,8 @@ pushd "$base_dir"/multiple >/dev/null
 rm -fr input1 input2 output
 
 # Produce the two indexes.
-clang -fsyntax-only -index-store-path input1 input1.c "-ffile-prefix-map=$PWD=."
-clang -fsyntax-only -index-store-path input2 input2.c "-ffile-prefix-map=$PWD=."
+_clang -fsyntax-only -index-store-path input1 input1.c "-ffile-prefix-map=$PWD=."
+_clang -fsyntax-only -index-store-path input2 input2.c "-ffile-prefix-map=$PWD=."
 
 "$index_import" \
   -parallel-stride 1 \
@@ -283,7 +301,7 @@ clang -fsyntax-only -index-store-path input2 input2.c "-ffile-prefix-map=$PWD=."
 # See https://llvm.org/docs/CommandGuide/FileCheck.html
 "$absolute_unit" \
   output/v5/units/* \
-  | FileCheck expected.txt
+  | filecheck expected.txt
 
 # Check that the expected index files exist.
 ls output/v5/units/output1.c.o-383YT9Q6Q1VBR >/dev/null
@@ -293,7 +311,7 @@ ls output/v5/records/FG/input2.c-V47TGXUYI0FG >/dev/null
 
 # Check that the record files are identical.
 for record in {input1,input2}/v5/records/*; do
-    diff -q -r "$record" output/v5/records/"$(basename "$record")"
+  diff -q -r "$record" output/v5/records/"$(basename "$record")"
 done
 
 echo "Multiple indexes tests passed"

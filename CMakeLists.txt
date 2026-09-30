@@ -53,3 +53,22 @@ endfunction()
 add_index_executable(index-import)
 add_index_executable(absolute-unit)
 add_index_executable(validate-index)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  find_program(SWIFTC_EXECUTABLE swiftc)
+  if(SWIFTC_EXECUTABLE)
+    get_filename_component(SWIFTC_REALPATH "${SWIFTC_EXECUTABLE}" REALPATH)
+    get_filename_component(SWIFT_BIN_DIR "${SWIFTC_REALPATH}" DIRECTORY)
+  endif()
+  find_path(DISPATCH_INCLUDE_DIR dispatch/dispatch.h
+    HINTS "${SWIFT_BIN_DIR}/../lib/swift")
+  find_library(DISPATCH_LIBRARY dispatch
+    HINTS "${SWIFT_BIN_DIR}/../lib/swift_static/linux" "${SWIFT_BIN_DIR}/../lib/swift/linux")
+  find_library(BLOCKS_RUNTIME_LIBRARY BlocksRuntime
+    HINTS "${SWIFT_BIN_DIR}/../lib/swift_static/linux" "${SWIFT_BIN_DIR}/../lib/swift/linux")
+  if(NOT DISPATCH_INCLUDE_DIR OR NOT DISPATCH_LIBRARY OR NOT BLOCKS_RUNTIME_LIBRARY)
+    message(FATAL_ERROR "libdispatch headers, libdispatch, and BlocksRuntime are required on Linux")
+  endif()
+  target_include_directories(index-import SYSTEM PRIVATE "${DISPATCH_INCLUDE_DIR}")
+  target_link_libraries(index-import PRIVATE "${DISPATCH_LIBRARY}" "${BLOCKS_RUNTIME_LIBRARY}")
+endif()

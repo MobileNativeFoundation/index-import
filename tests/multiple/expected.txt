@@ -7,8 +7,10 @@ CHECK: ModuleName:
 CHECK: IsSystemUnit: 0
 CHECK: IsModuleUnit: 0
 CHECK: IsDebugCompilation: 1
-CHECK: CompilationTarget: {{x86_64|arm64}}-apple-macosx10.{{.+}}
-CHECK: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk
+DARWIN: CompilationTarget: {{x86_64|arm64}}-apple-macosx10.{{.+}}
+DARWIN: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk
+LINUX: CompilationTarget: {{x86_64|aarch64}}-unknown-linux-gnu
+LINUX: SysrootPath: {{.*}}
 CHECK: ProviderIdentifier: clang
 CHECK: ProviderVersion: {{.+}}
 CHECK: Dependencies:
@@ -26,8 +28,10 @@ CHECK: ModuleName:
 CHECK: IsSystemUnit: 0
 CHECK: IsModuleUnit: 0
 CHECK: IsDebugCompilation: 1
-CHECK: CompilationTarget: {{x86_64|arm64}}-apple-macosx10.{{.+}}
-CHECK: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk
+DARWIN: CompilationTarget: {{x86_64|arm64}}-apple-macosx10.{{.+}}
+DARWIN: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk
+LINUX: CompilationTarget: {{x86_64|aarch64}}-unknown-linux-gnu
+LINUX: SysrootPath: {{.*}}
 CHECK: ProviderIdentifier: clang
 CHECK: ProviderVersion: {{.+}}
 CHECK: Dependencies:
