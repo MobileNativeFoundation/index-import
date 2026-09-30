@@ -276,10 +276,10 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
   auto writer = IndexUnitWriter(
       fileMgr, OutputIndexPath, reader->getProviderIdentifier(),
       reader->getProviderVersion(), compress, outputFile,
-      reader->getModuleName(),
-      getFileEntryRef(fileMgr, mainFilePath), reader->isSystemUnit(),
-      reader->isModuleUnit(), reader->isDebugCompilation(), reader->getTarget(),
-      sysrootPath, clangPathRemapper, moduleNames.getModuleInfo);
+      reader->getModuleName(), getFileEntryRef(fileMgr, mainFilePath),
+      reader->isSystemUnit(), reader->isModuleUnit(),
+      reader->isDebugCompilation(), reader->getTarget(), sysrootPath,
+      clangPathRemapper, moduleNames.getModuleInfo);
 
   reader->foreachDependency([&](const IndexUnitReader::DependencyInfo &info) {
     SmallString<128> inputRecordPath;
