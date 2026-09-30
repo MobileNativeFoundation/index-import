@@ -57,7 +57,7 @@ jobs:
 
     - name: Restore LLVM cache
       id: llvm-cache
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       with:
         path: llvm
         key: ${{ runner.os }}-llvm-cache-${{ env.SWIFT_VERSION }}-bump3
@@ -80,6 +80,13 @@ jobs:
     - name: "LLVM: Build"
       if: steps.llvm-cache.outputs.cache-hit != 'true'
       run: cd llvm/build && ninja IndexStore FileCheck
+
+    - name: Save LLVM cache
+      if: steps.llvm-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: llvm
+        key: ${{ steps.llvm-cache.outputs.cache-primary-key }}
 
     - name: "index-import: CMake"
       run: mkdir build && cmake -B build -G Ninja -DClang_DIR=./llvm/build/lib/cmake/clang/ -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
