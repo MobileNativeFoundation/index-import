@@ -49,6 +49,12 @@ jobs:
       if: matrix.os == 'ubuntu-22.04'
       run: sudo apt install -y cmake ninja-build
 
+    - name: Set up Swift
+      if: matrix.os == 'ubuntu-22.04'
+      uses: swift-actions/setup-swift@v2
+      with:
+        swift-version: ${{ env.SWIFT_VERSION }}
+
     - name: Restore LLVM cache
       id: llvm-cache
       uses: actions/cache@v4
@@ -93,6 +99,7 @@ jobs:
     - name: "index-import: upload"
       uses: actions/upload-artifact@v4
       with:
+        name: index-import-${{ runner.os }}
         path: build/index-import.tar.gz
 
   create-release:
@@ -106,6 +113,9 @@ jobs:
 
     - name: Download index-import artifact
       uses: actions/download-artifact@v4
+      with:
+        name: index-import-macOS
+        path: artifact
 
     - name: Create release
       run: |

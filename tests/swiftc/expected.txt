@@ -7,15 +7,17 @@ CHECK: ModuleName: input
 CHECK: IsSystemUnit: 0
 CHECK: IsModuleUnit: 0
 CHECK: IsDebugCompilation: 1
-CHECK: CompilationTarget: {{x86_64|arm64}}-apple-macosx10.{{.+}}
-CHECK: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.*}}.sdk
+DARWIN: CompilationTarget: {{x86_64|arm64}}-apple-macosx10.{{.+}}
+DARWIN: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.*}}.sdk
+LINUX: CompilationTarget: {{x86_64|aarch64}}-unknown-linux-gnu
+LINUX: SysrootPath: {{.*}}
 CHECK: ProviderIdentifier: swift
 CHECK: ProviderVersion:
 CHECK: Dependencies:
 CHECK: 	DependencyKind: Unit
 CHECK: 	IsSystem: 1
-CHECK: 	UnitOrRecordName: {{x86_64|arm64e}}-apple-macos.swiftinterface-{{.+}}
-CHECK: 	FilePath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.*}}.sdk/usr/lib/swift/Swift.swiftmodule/{{x86_64|arm64e}}-apple-macos.swiftinterface
+CHECK: 	UnitOrRecordName: {{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}.swiftinterface-{{.+}}
+CHECK: 	FilePath: {{.+}}/lib/swift/{{(linux/)?}}Swift.swiftmodule/{{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}.swiftinterface
 CHECK: 	ModuleName: Swift
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 0
@@ -23,21 +25,23 @@ CHECK: 	UnitOrRecordName: input.swift-{{.+}}
 CHECK: 	FilePath: /fake/working/dir/input.swift
 CHECK: 	ModuleName:
 CHECK: ---
-CHECK: # output/v5/units/{{x86_64|arm64e}}-apple-macos.swiftinterface-{{.+}}
+CHECK: # output/v5/units/{{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}.swiftinterface-{{.+}}
 CHECK: WorkingDirectory: /fake/working/dir
 CHECK: MainFilePath:
-CHECK: OutputFile: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk/usr/lib/swift/Swift.swiftmodule/{{x86_64|arm64e}}-apple-macos.swiftinterface
+CHECK: OutputFile: {{.+}}/lib/swift/{{(linux/)?}}Swift.swiftmodule/{{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}.swiftinterface
 CHECK: ModuleName: Swift
 CHECK: IsSystemUnit: 1
 CHECK: IsModuleUnit: 1
 CHECK: IsDebugCompilation: 1
-CHECK: CompilationTarget: {{x86_64|arm64}}-apple-macosx10.{{.+}}
-CHECK: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk
+DARWIN: CompilationTarget: {{x86_64|arm64}}-apple-macosx10.{{.+}}
+DARWIN: SysrootPath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk
+LINUX: CompilationTarget: {{x86_64|aarch64}}-unknown-linux-gnu
+LINUX: SysrootPath: {{.*}}
 CHECK: ProviderIdentifier: swift
 CHECK: ProviderVersion:
 CHECK: Dependencies:
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 1
-CHECK: 	UnitOrRecordName: {{x86_64|arm64e}}-apple-macos.swiftinterface-{{.+}}
-CHECK: 	FilePath: {{.+}}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX{{.+}}.sdk/usr/lib/swift/Swift.swiftmodule/{{x86_64|arm64e}}-apple-macos.swiftinterface
+CHECK: 	UnitOrRecordName: {{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}.swiftinterface-{{.+}}
+CHECK: 	FilePath: {{.+}}/lib/swift/{{(linux/)?}}Swift.swiftmodule/{{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}.swiftinterface
 CHECK: 	ModuleName: Swift
