@@ -16,13 +16,15 @@ env:
 
 jobs:
   build:
-    name: Test ${{ matrix.os }}
+    name: Test ${{ matrix.name }}
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - xcode-27
-          - ubuntu-22.04
+        include:
+          - name: macOS
+            os: xcode-27
+          - name: ubuntu-22.04
+            os: ubuntu-22.04
 
     runs-on: ${{ matrix.os }}
     steps:
