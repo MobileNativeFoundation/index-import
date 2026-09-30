@@ -53,9 +53,11 @@ jobs:
 
     - name: Set up Swift
       if: matrix.os == 'ubuntu-22.04'
-      uses: swift-actions/setup-swift@v2
-      with:
-        swift-version: ${{ env.SWIFT_VERSION }}
+      run: |
+        swift_toolchain="swift-${SWIFT_VERSION}-RELEASE-ubuntu22.04"
+        curl -fL "https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2204/swift-${SWIFT_VERSION}-RELEASE/${swift_toolchain}.tar.gz" -o "$RUNNER_TEMP/swift.tar.gz"
+        tar -xzf "$RUNNER_TEMP/swift.tar.gz" -C "$RUNNER_TEMP"
+        echo "$RUNNER_TEMP/$swift_toolchain/usr/bin" >> "$GITHUB_PATH"
 
     - name: Restore LLVM cache
       id: llvm-cache
