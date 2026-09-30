@@ -16,8 +16,8 @@ CHECK: ProviderVersion:
 CHECK: Dependencies:
 CHECK: 	DependencyKind: Unit
 CHECK: 	IsSystem: 1
-CHECK: 	UnitOrRecordName: {{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}.swiftinterface-{{.+}}
-CHECK: 	FilePath: {{.+}}/lib/swift/{{(linux/)?}}Swift.swiftmodule/{{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}.swiftinterface
+CHECK: 	UnitOrRecordName: {{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}{{(\.private)?}}.swiftinterface-{{.+}}
+CHECK: 	FilePath: {{.+}}/lib/swift/{{(linux/)?}}Swift.swiftmodule/{{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}{{(\.private)?}}.swiftinterface
 CHECK: 	ModuleName: Swift
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 0
@@ -25,10 +25,10 @@ CHECK: 	UnitOrRecordName: input.swift-{{.+}}
 CHECK: 	FilePath: /fake/working/dir/input.swift
 CHECK: 	ModuleName:
 CHECK: ---
-CHECK: # output/v5/units/{{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}.swiftinterface-{{.+}}
+CHECK: # output/v5/units/{{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}{{(\.private)?}}.swiftinterface-{{.+}}
 CHECK: WorkingDirectory: /fake/working/dir
 CHECK: MainFilePath:
-CHECK: OutputFile: {{.+}}/lib/swift/{{(linux/)?}}Swift.swiftmodule/{{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}.swiftinterface
+CHECK: OutputFile: {{.+}}/lib/swift/{{(linux/)?}}Swift.swiftmodule/{{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}{{(\.private)?}}.swiftinterface
 CHECK: ModuleName: Swift
 CHECK: IsSystemUnit: 1
 CHECK: IsModuleUnit: 1
@@ -42,6 +42,6 @@ CHECK: ProviderVersion:
 CHECK: Dependencies:
 CHECK: 	DependencyKind: Record
 CHECK: 	IsSystem: 1
-CHECK: 	UnitOrRecordName: {{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}.swiftinterface-{{.+}}
-CHECK: 	FilePath: {{.+}}/lib/swift/{{(linux/)?}}Swift.swiftmodule/{{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}.swiftinterface
+CHECK: 	UnitOrRecordName: {{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}{{(\.private)?}}.swiftinterface-{{.+}}
+CHECK: 	FilePath: {{.+}}/lib/swift/{{(linux/)?}}Swift.swiftmodule/{{x86_64|arm64e|aarch64}}-{{apple-macos|unknown-linux-gnu}}{{(\.private)?}}.swiftinterface
 CHECK: 	ModuleName: Swift
