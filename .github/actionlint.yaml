@@ -1,0 +1,4 @@
+# TODO: Remove once actionlint respects this or GA changes the label
+self-hosted-runner:
+  labels:
+    - xcode-27

@@ -12,7 +12,7 @@ on:
 name: Continuous integration
 
 env:
-  SWIFT_VERSION: 6.4
+  SWIFT_VERSION: 6.4.0
 
 jobs:
   build:
