@@ -66,6 +66,35 @@ popd >/dev/null
 
 ############################################################
 
+echo "Testing compressed units"
+pushd "$base_dir"/import_only >/dev/null
+
+# Clean any test state from previous runs.
+rm -fr input output
+
+# Produce a compressed index and check the unit's on-disk compression marker.
+clang -fsyntax-only -index-store-path input -index-store-compress input.c
+for unit in input/v5/units/*; do
+  test "$(head -c 5 "$unit")" = CIDXU
+done
+
+"$index_import" input output
+
+# Importing must preserve compression and leave the unit readable.
+for unit in output/v5/units/*; do
+  test "$(head -c 5 "$unit")" = CIDXU
+done
+"$absolute_unit" \
+  output/v5/units/* \
+  | FileCheck "-DPWD=$PWD" expected.txt
+
+diff -q -r {input,output}/v5/records/
+
+echo "compressed unit tests passed"
+popd >/dev/null
+
+############################################################
+
 echo "Testing import-output-file"
 pushd "$base_dir"/import_only >/dev/null
 
@@ -241,7 +270,7 @@ _swiftc -index-store-path input -c input.swift -file-prefix-map "$PWD=." && rm i
 
 # Check that the expected index files exist.
 ls output/v5/units/output.o-2L127TAXYGI6T >/dev/null
-ls output/v5/records/S9/input.swift-1M4LGH2SWM0S9 >/dev/null
+ls output/v5/records/D9/input.swift-3A5CUXXGLMSD9 >/dev/null
 
 # Check that the record files are identical.
 diff -q -r {input,output}/v5/records/
@@ -272,7 +301,7 @@ _swiftc -index-store-path input -c input.swift -index-unit-output-path /foo/some
 
 # Check that the expected index files exist.
 ls output/v5/units/output.o-2L127TAXYGI6T >/dev/null
-ls output/v5/records/S9/input.swift-1M4LGH2SWM0S9 >/dev/null
+ls output/v5/records/D9/input.swift-3A5CUXXGLMSD9 >/dev/null
 
 # Check that the record files are identical.
 diff -q -r {input,output}/v5/records/

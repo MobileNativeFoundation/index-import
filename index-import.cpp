@@ -5,6 +5,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
@@ -225,7 +226,7 @@ static bool cloneRecord(StringRef from, StringRef to) {
 static std::optional<IndexUnitWriter>
 importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
            StringRef outputRecordsPath, StringRef inputRecordsPath,
-           const std::unique_ptr<IndexUnitReader> &reader,
+           const std::unique_ptr<IndexUnitReader> &reader, bool compress,
            const Remapper &remapper, const PathRemapper &clangPathRemapper,
            FileManager &fileMgr, ModuleNameScope &moduleNames) {
   // The set of remapped paths.
@@ -274,10 +275,11 @@ importUnit(StringRef outputUnitsPath, StringRef inputUnitPath,
 
   auto writer = IndexUnitWriter(
       fileMgr, OutputIndexPath, reader->getProviderIdentifier(),
-      reader->getProviderVersion(), outputFile, reader->getModuleName(),
-      getFileEntryRef(fileMgr, mainFilePath), reader->isSystemUnit(),
-      reader->isModuleUnit(), reader->isDebugCompilation(), reader->getTarget(),
-      sysrootPath, clangPathRemapper, moduleNames.getModuleInfo);
+      reader->getProviderVersion(), compress, outputFile,
+      reader->getModuleName(), getFileEntryRef(fileMgr, mainFilePath),
+      reader->isSystemUnit(), reader->isModuleUnit(),
+      reader->isDebugCompilation(), reader->getTarget(), sysrootPath,
+      clangPathRemapper, moduleNames.getModuleInfo);
 
   reader->foreachDependency([&](const IndexUnitReader::DependencyInfo &info) {
     SmallString<128> inputRecordPath;
@@ -435,9 +437,18 @@ static bool remapIndex(const Remapper &remapper,
       return;
     }
 
+    // The reader decompresses units without exposing their original format.
+    // Preserve compression by checking the on-disk marker used by Clang.
+    // https://github.com/swiftlang/llvm-project/blob/093d25376dea0473cc777f436dfaae84e8740a07/clang/lib/Index/IndexUnitReader.cpp#L286
+    auto header = MemoryBuffer::getFileSlice(unitPath, 5, 0);
+    bool compress = false;
+    if (header) {
+      compress = (*header)->getBuffer() == "CIDXU";
+    }
+
     ModuleNameScope moduleNames;
     auto writer = importUnit(outputUnitDirectory, unitPath, outputRecordsPath_,
-                             recordsDirectory, reader, remapper,
+                             recordsDirectory, reader, compress, remapper,
                              clangPathRemapper, fileManager, moduleNames);
 
     if (writer.has_value()) {

@@ -12,17 +12,19 @@ on:
 name: Continuous integration
 
 env:
-  SWIFT_VERSION: 6.1
+  SWIFT_VERSION: 6.4.0
 
 jobs:
   build:
-    name: Test ${{ matrix.os }}
+    name: Test ${{ matrix.name }}
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - macos-15
-          - ubuntu-22.04
+        include:
+          - name: macOS
+            os: xcode-27
+          - name: ubuntu-22.04
+            os: ubuntu-22.04
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -30,19 +32,19 @@ jobs:
       uses: actions/checkout@v4
 
     - name: "List Xcode versions"
-      if: matrix.os == 'macos-15'
+      if: matrix.os == 'xcode-27'
       run: ls /Applications | grep Xcode
 
     - name: "Select Xcode version"
-      if: matrix.os == 'macos-15'
-      run: sudo xcode-select -s /Applications/Xcode_16.3.app
+      if: matrix.os == 'xcode-27'
+      run: sudo xcode-select -s /Applications/Xcode_27.0.app
 
     - name: "Print Xcode version"
-      if: matrix.os == 'macos-15'
+      if: matrix.os == 'xcode-27'
       run: xcodebuild -version
 
     - name: "Install build dependencies"
-      if: matrix.os == 'macos-15'
+      if: matrix.os == 'xcode-27'
       run: brew install ninja
 
     - name: "Install build dependencies"
@@ -51,9 +53,11 @@ jobs:
 
     - name: Set up Swift
       if: matrix.os == 'ubuntu-22.04'
-      uses: swift-actions/setup-swift@v2
-      with:
-        swift-version: ${{ env.SWIFT_VERSION }}
+      run: |
+        swift_toolchain="swift-${SWIFT_VERSION}-RELEASE-ubuntu22.04"
+        curl -fL "https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2204/swift-${SWIFT_VERSION}-RELEASE/${swift_toolchain}.tar.gz" -o "$RUNNER_TEMP/swift.tar.gz"
+        tar -xzf "$RUNNER_TEMP/swift.tar.gz" -C "$RUNNER_TEMP"
+        echo "$RUNNER_TEMP/$swift_toolchain/usr/bin" >> "$GITHUB_PATH"
 
     - name: Restore LLVM cache
       id: llvm-cache
