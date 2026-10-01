@@ -4,8 +4,17 @@
 set -euo pipefail
 
 base_dir=$(dirname "$0")
-readonly index_import=../../build/index-import
-readonly absolute_unit=../../build/absolute-unit
+build_dir=$(cd "$base_dir/../build" && pwd)
+readonly index_import="$build_dir/index-import"
+readonly absolute_unit="$build_dir/absolute-unit"
+filecheck="$build_dir/_deps/swift_llvm-build/bin/FileCheck"
+if [[ ! -x "$filecheck" ]]; then
+  filecheck=$(command -v FileCheck)
+fi
+if [[ ! -x "$filecheck" ]]; then
+  echo "error: FileCheck not found in \$PATH"
+  exit 1
+fi
 
 if [[ $(uname -s) == Darwin ]]; then
   _clang() {
@@ -26,7 +35,7 @@ else
 fi
 
 filecheck() {
-  FileCheck --check-prefixes="$check_prefixes" "$@"
+  "$filecheck" --check-prefixes="$check_prefixes" "$@"
 }
 
 ############################################################
@@ -45,7 +54,7 @@ if remap_error=$("$index_import" -remap '(input)=$2' input output 2>&1); then
     echo "Expected remap with a nonexistent capture group to fail" >&2
     exit 1
 fi
-FileCheck invalid-remap.txt <<< "$remap_error"
+"$filecheck" invalid-remap.txt <<< "$remap_error"
 
 "$index_import" input output
 
@@ -73,7 +82,7 @@ pushd "$base_dir"/import_only >/dev/null
 rm -fr input output
 
 # Produce a compressed index and check the unit's on-disk compression marker.
-clang -fsyntax-only -index-store-path input -index-store-compress input.c
+_clang -fsyntax-only -index-store-path input -index-store-compress input.c
 for unit in input/v5/units/*; do
   test "$(head -c 5 "$unit")" = CIDXU
 done
@@ -86,7 +95,7 @@ for unit in output/v5/units/*; do
 done
 "$absolute_unit" \
   output/v5/units/* \
-  | FileCheck "-DPWD=$PWD" expected.txt
+  | filecheck "-DPWD=$PWD" expected.txt
 
 diff -q -r {input,output}/v5/records/
 

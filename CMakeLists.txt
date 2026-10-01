@@ -1,9 +1,36 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.28)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 set(CMAKE_CXX_STANDARD 17)
 
 if(COMMAND project)
   project(index-import)
+endif()
+
+include(FetchContent)
+option(INDEX_IMPORT_BUILD_LLVM "Build Swift's LLVM fork instead of using an existing Clang package" ON)
+set(INDEX_IMPORT_LLVM_REVISION "swift-6.4.0-RELEASE"
+    CACHE STRING "Swift LLVM commit SHA or tag to build")
+
+if(INDEX_IMPORT_BUILD_LLVM)
+  set(LLVM_ENABLE_PROJECTS clang CACHE STRING "LLVM projects to build")
+  set(LLVM_TARGETS_TO_BUILD "X86;AArch64" CACHE STRING "LLVM targets to build")
+  set(LLVM_PARALLEL_LINK_JOBS 2 CACHE STRING "Maximum parallel LLVM link jobs")
+  set(LLVM_INCLUDE_TESTS OFF CACHE BOOL "Build LLVM tests")
+  set(LLVM_INCLUDE_BENCHMARKS OFF CACHE BOOL "Build LLVM benchmarks")
+  set(LLVM_USE_STATIC_ZSTD ON CACHE BOOL "Link zstd statically")
+  FetchContent_Declare(
+    swift_llvm
+    URL "https://github.com/swiftlang/llvm-project/archive/${INDEX_IMPORT_LLVM_REVISION}.tar.gz"
+    SOURCE_SUBDIR llvm
+    EXCLUDE_FROM_ALL
+  )
+  FetchContent_MakeAvailable(swift_llvm)
+  file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/llvm-revision.txt"
+       CONTENT "${INDEX_IMPORT_LLVM_REVISION}\n")
+  set(LLVM_INCLUDE_DIRS "${swift_llvm_SOURCE_DIR}/llvm/include" "${swift_llvm_BINARY_DIR}/include")
+  set(CLANG_INCLUDE_DIRS "${swift_llvm_SOURCE_DIR}/clang/include" "${swift_llvm_BINARY_DIR}/tools/clang/include")
+else()
+  find_package(Clang CONFIG REQUIRED)
 endif()
 
 find_package(re2 QUIET)
@@ -14,7 +41,6 @@ if(NOT re2_FOUND)
   # Abseil is a build requirement for re2.
   set(ABSL_PROPAGATE_CXX_STD ON)
   set(ABSL_ENABLE_INSTALL ON)
-  include(FetchContent)
   FetchContent_Declare(
     absl
     GIT_REPOSITORY "https://github.com/abseil/abseil-cpp.git"
@@ -30,9 +56,6 @@ if(NOT re2_FOUND)
   )
   FetchContent_MakeAvailable(re2)
 endif()
-
-
-find_package(Clang CONFIG REQUIRED)
 
 function(add_index_executable execname)
   add_executable("${execname}" "${execname}.cpp")
@@ -71,4 +94,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   endif()
   target_include_directories(index-import SYSTEM PRIVATE "${DISPATCH_INCLUDE_DIR}")
   target_link_libraries(index-import PRIVATE "${DISPATCH_LIBRARY}" "${BLOCKS_RUNTIME_LIBRARY}")
+endif()
+
+if(INDEX_IMPORT_BUILD_LLVM)
+  add_custom_target(check-index-import
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/tests/run.sh"
+    DEPENDS index-import absolute-unit FileCheck validate-index
+    USES_TERMINAL
+  )
 endif()

@@ -71,38 +71,13 @@ remapped to local only paths using one of the examples above.
 
 ## Build Instructions
 
-The build uses [CMake](https://cmake.org) because [Apple's LLVM fork](https://github.com/apple/llvm-project) uses CMake. The `index-import` build script is small, but depends on the libraries from LLVM. To build `index-import`, first [install the tools required by Swift](https://github.com/apple/swift/blob/main/docs/HowToGuides/GettingStarted.md#system-requirements), then build swift by following the [Swift build instructions](https://github.com/apple/swift/blob/main/docs/HowToGuides/GettingStarted.md#building-the-project-for-the-first-time).
-
-When building Swift, keep the following in mind:
-
-1. Checkout the desired release branch of Swift using something like `./swift/utils/update-checkout --clone --scheme release/5.7`.
-2. Build Swift using `--release`/`-R` for performance
-
-Building all of Swift can take a long time, and most of that isn't needed by `index-import`. A faster way to build `index-import`, is to build only `libIndexStore.dylib`. Here are the commands to do just that:
+The build requires CMake 3.28 or newer, Ninja, `clang`, and `swiftc`.
+CMake downloads Swift's llvm fork and builds the libraries needed by
+`index-import`.
 
 ```sh
-./swift/utils/build-script --release --skip-build --llvm-targets-to-build AArch64
-ninja -C build/llvm-macosx-arm64 libIndexStore.dylib
-```
-
-Once swift (or `libIndexStore.dylib`) has been built, `index-import` can be built as follows. The _key_ step is to update your `PATH` variable to include the llvm `bin/` directory (from the swift-source build directory). This ensures CMake can find all necessary build dependencies.
-
-```sh
-# From the index-import directory
-mkdir build
-cd build
-PATH="path/to/swift-source/build/llvm-macosx-arm64/bin:$PATH"
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Release ..
-ninja
-```
-
-If you need to cross compile checkout [RELEASING.md](RELEASING.md)
-
-Or, if you prefer Xcode for building and debugging, you can replace the last 2 lines with the following:
-
-```
-cmake -G Xcode -DCMAKE_BUILD_TYPE=Release ..
-open index-import.xcodeproj
+CC=clang CXX=clang++ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target check-index-import
 ```
 
 ## Index File Format
