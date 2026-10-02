@@ -99,6 +99,17 @@ done
 
 diff -q -r {input,output}/v5/records/
 
+rm -fr output
+"$index_import" --decompress input output
+
+# --decompress must override the input format and leave the unit readable.
+for unit in output/v5/units/*; do
+  test "$(head -c 5 "$unit")" != CIDXU
+done
+"$absolute_unit" \
+  output/v5/units/* \
+  | filecheck "-DPWD=$PWD" expected.txt
+
 echo "compressed unit tests passed"
 popd >/dev/null
 

@@ -50,6 +50,10 @@ static cl::opt<bool>
     Incremental("incremental",
                 cl::desc("Only transfer units if they are newer"));
 
+static cl::opt<bool>
+    Decompress("decompress",
+               cl::desc("Write imported unit files without compression"));
+
 static cl::opt<bool> UndoRulesSwiftRenames(
     "undo-rules_swift-renames",
     cl::desc(
@@ -440,10 +444,12 @@ static bool remapIndex(const Remapper &remapper,
     // The reader decompresses units without exposing their original format.
     // Preserve compression by checking the on-disk marker used by Clang.
     // https://github.com/swiftlang/llvm-project/blob/093d25376dea0473cc777f436dfaae84e8740a07/clang/lib/Index/IndexUnitReader.cpp#L286
-    auto header = MemoryBuffer::getFileSlice(unitPath, 5, 0);
     bool compress = false;
-    if (header) {
-      compress = (*header)->getBuffer() == "CIDXU";
+    if (!Decompress) {
+      auto header = MemoryBuffer::getFileSlice(unitPath, 5, 0);
+      if (header) {
+        compress = (*header)->getBuffer() == "CIDXU";
+      }
     }
 
     ModuleNameScope moduleNames;
